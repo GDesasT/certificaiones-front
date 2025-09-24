@@ -1,0 +1,5 @@
+/* Solución simple: solo un padding-top fijo */
+.main-content {
+  padding-top: 80px; /* Altura del navbar + margen */
+  min-height: 100vh;
+}

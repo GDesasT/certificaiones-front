@@ -12,16 +12,16 @@ interface MenuItem {
   selector: 'app-navbar',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  templateUrl: './navbar.component.html',
-  styleUrl: './navbar.component.css'
+  templateUrl: './navbar.html',
+  styleUrl: './navbar.css'
 })
-export class NavbarComponent {
+export class Navbar {
   companyName = 'Sistema de Certificaciones';
   
   menuItems: MenuItem[] = [
     { name: 'Inicio', route: '/home', icon: 'bi-house-door' },
     { name: 'Certificar Personas', route: '/certificar', icon: 'bi-award' },
-    { name: 'Ver Certificaciones', route: '/ver-certificaciones', icon: 'bi-search' },
+    { name: 'Ver Certificaciones', route: '/certificaciones', icon: 'bi-search' },
     { name: 'Matriz de Entrenamiento', route: '/matriz-entrenamiento', icon: 'bi-table' }
   ];
 }

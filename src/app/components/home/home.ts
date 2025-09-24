@@ -13,10 +13,10 @@ interface DashboardButton {
   selector: 'app-home',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.css'
+  templateUrl: './home.html',
+  styleUrl: './home.css'
 })
-export class HomeComponent {
+export class Home {
   protected readonly projectTitle = signal('Sistema de Certificaciones');
   protected readonly projectSubtitle = signal('Gestión integral de certificaciones y competencias');
 

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './components/home/home.component';
+import { Home } from './components/home/home';
+import { Certificaciones } from './components/certificaciones/certificaciones';
 
 export const routes: Routes = [
   {
@@ -9,21 +10,21 @@ export const routes: Routes = [
   },
   {
     path: 'home',
-    component: HomeComponent
+    component: Home
   },
   {
     path: 'certificar',
-    loadComponent: () => import('./components/home/home.component').then(m => m.HomeComponent)
+    loadComponent: () => import('./components/home/home').then(m => m.Home)
     // TODO: Crear componente de certificar
   },
   {
     path: 'certificaciones',
-    loadComponent: () => import('./components/home/home.component').then(m => m.HomeComponent)
+    loadComponent: () => import('./components/certificaciones/certificaciones').then(m => m.Certificaciones)
     // TODO: Crear componente de certificaciones
   },
   {
     path: 'matriz-entrenamiento',
-    loadComponent: () => import('./components/home/home.component').then(m => m.HomeComponent)
+    loadComponent: () => import('./components/home/home').then(m => m.Home)
     // TODO: Crear componente de matriz de entrenamiento
   },
   {

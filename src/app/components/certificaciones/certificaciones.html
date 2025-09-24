@@ -1,0 +1,138 @@
+<div class="container-fluid mt-4">
+    <div class="search-container">
+        <div class="search-header">
+            <i class="bi bi-search"></i>
+            <h3>Buscar Certificaciones por Empleado</h3>
+        </div>
+        
+        <div class="search-form">
+            <div class="form-row">
+                <div class="input-group-number">
+                    <label for="numeroInput">
+                        <i class="bi bi-hash"></i>
+                        Número de Empleado
+                    </label>
+                    <input 
+                        id="numeroInput"
+                        type="number" 
+                        class="number-input" 
+                        placeholder="# de Empleado" 
+                        maxlength="4"
+                        max="9999"
+                        min="1"
+                        [(ngModel)]="numeroEmpleado"
+                    >
+                </div>
+                
+                <div class="input-group-name">
+                    <label for="nombreInput">
+                        <i class="bi bi-person"></i>
+                        Nombre del Empleado
+                    </label>
+                    <div class="name-and-buttons">
+                        <input 
+                            id="nombreInput"
+                            type="text" 
+                            class="name-input" 
+                            placeholder="Nombre Completo" 
+                            [value]="nombreEmpleadoEncontrado"
+                            readonly
+                        >
+                        <div class="button-group">
+                            <button 
+                                class="btn btn-warning" 
+                                type="button" 
+                                (click)="limpiarBusqueda()"
+                            >
+                                <i class="bi bi-arrow-clockwise"></i>
+                                Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-award me-2"></i>
+                Certificaciones Encontradas
+            </h5>
+            <span class="badge bg-light text-dark fs-6">
+                {{ tableCertificaciones.length }} resultado(s)
+            </span>
+        </div>
+        
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="px-4 text-center"># Empleado</th>
+                            <th>Nombre Completo</th>
+                            <th>Certificación Obtenida</th>
+                            <th>Fecha de Certificación</th>
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    
+                    <tbody>
+                        <tr *ngFor="let cert of tableCertificaciones" class="align-middle">
+                            <th class="px-4 fw-bold text-primary text-center">{{ cert.id }}</th>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-circle me-2 text-secondary fs-5"></i>
+                                    <span class="fw-medium">{{ cert.nombre }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-success fs-6 px-3 py-2">{{ cert.certificacion }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-calendar-event me-2 text-muted"></i>
+                                    <span>{{ cert.fecha }}</span>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success px-3 py-2">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Certificado
+                                </span>
+                            </td>
+                        </tr>
+                        
+                        <tr *ngIf="noHayResultadosConBusqueda" class="text-center">
+                            <td colspan="5" class="py-5">
+                                <div class="text-muted">
+                                    <i class="bi bi-exclamation-triangle fs-1 d-block mb-3 text-warning"></i>
+                                    <h5 class="text-warning">No se encontraron certificaciones</h5>
+                                    <p class="mb-0">
+                                        No existe un empleado con el ID: 
+                                        <strong class="text-danger">{{ numeroEmpleado }}</strong>
+                                    </p>
+                                    <small class="text-muted mt-2 d-block">Verifica el número e intenta nuevamente</small>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <tr *ngIf="tableCertificaciones.length === 0 && noHayBusqueda" class="text-center">
+                            <td colspan="5" class="py-5">
+                                <div class="text-muted">
+                                    <i class="bi bi-search fs-1 d-block mb-3 text-info"></i>
+                                    <h5 class="text-info">Búsqueda de Certificaciones</h5>
+                                    <p class="mb-0">Ingresa un ID de empleado para buscar certificaciones</p>
+                                    <small class="text-muted mt-2 d-block">IDs disponibles: 1001, 1002, 1003, 1004, 1005</small>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
