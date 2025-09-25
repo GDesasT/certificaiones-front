@@ -1,138 +1,279 @@
-<div class="container-fluid mt-4">
-    <div class="search-container">
-        <div class="search-header">
-            <i class="bi bi-search"></i>
-            <h3>Buscar Certificaciones por Empleado</h3>
+<div class="certificaciones-wrapper">
+  <div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="header-card">
+          <div class="header-content">
+            <h2 class="header-title">
+              <i class="bi bi-people-fill me-2"></i>
+              CONSULTAR CERTIFICACIONES DE EMPLEADO
+            </h2>
+            <div class="company-logo">
+              <span class="logo-text">GLOBAL SOFT PARTNER</span>
+            </div>
+          </div>
         </div>
-        
-        <div class="search-form">
-            <div class="form-row">
-                <div class="input-group-number">
-                    <label for="numeroInput">
-                        <i class="bi bi-hash"></i>
-                        Número de Empleado
-                    </label>
-                    <input 
-                        id="numeroInput"
-                        type="number" 
-                        class="number-input" 
-                        placeholder="# de Empleado" 
-                        maxlength="4"
-                        max="9999"
-                        min="1"
-                        [(ngModel)]="numeroEmpleado"
-                    >
+      </div>
+    </div>
+
+    <!-- Formulario de Búsqueda -->
+    <form [formGroup]="busquedaForm" class="search-form">
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="search-card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="bi bi-search me-2"></i>
+                Buscar Empleado
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <label class="form-label required">No. Empleado</label>
+                  <input 
+                    type="text" 
+                    class="form-control"
+                    formControlName="numeroEmpleado"
+                    placeholder="Ej. 1234"
+                    maxlength="4"
+                    (input)="onNumeroEmpleadoInput($event)"
+                  >
+                  <div class="invalid-feedback" 
+                       [style.display]="busquedaForm.get('numeroEmpleado')?.invalid && busquedaForm.get('numeroEmpleado')?.touched ? 'block' : 'none'">
+                    Ingrese un número de empleado válido (4 dígitos)
+                  </div>
                 </div>
                 
-                <div class="input-group-name">
-                    <label for="nombreInput">
-                        <i class="bi bi-person"></i>
-                        Nombre del Empleado
-                    </label>
-                    <div class="name-and-buttons">
-                        <input 
-                            id="nombreInput"
-                            type="text" 
-                            class="name-input" 
-                            placeholder="Nombre Completo" 
-                            [value]="nombreEmpleadoEncontrado"
-                            readonly
-                        >
-                        <div class="button-group">
-                            <button 
-                                class="btn btn-warning" 
-                                type="button" 
-                                (click)="limpiarBusqueda()"
-                            >
-                                <i class="bi bi-arrow-clockwise"></i>
-                                Limpiar
-                            </button>
-                        </div>
-                    </div>
+                <div class="col-md-9">
+                  <label class="form-label">Nombre</label>
+                  <input 
+                    type="text" 
+                    class="form-control auto-filled"
+                    formControlName="nombre"
+                    readonly
+                    placeholder="El nombre se llenará automáticamente"
+                  >
                 </div>
+              </div>
             </div>
+          </div>
         </div>
-    </div>
-</div>
+      </div>
+    </form>
 
-<div class="container-fluid mt-4">
-    <div class="card">
-        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="bi bi-award me-2"></i>
-                Certificaciones Encontradas
-            </h5>
-            <span class="badge bg-light text-dark fs-6">
-                {{ tableCertificaciones.length }} resultado(s)
-            </span>
-        </div>
-        
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="px-4 text-center"># Empleado</th>
-                            <th>Nombre Completo</th>
-                            <th>Certificación Obtenida</th>
-                            <th>Fecha de Certificación</th>
-                            <th class="text-center">Estado</th>
-                        </tr>
-                    </thead>
-                    
-                    <tbody>
-                        <tr *ngFor="let cert of tableCertificaciones" class="align-middle">
-                            <th class="px-4 fw-bold text-primary text-center">{{ cert.id }}</th>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-person-circle me-2 text-secondary fs-5"></i>
-                                    <span class="fw-medium">{{ cert.nombre }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge bg-success fs-6 px-3 py-2">{{ cert.certificacion }}</span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-calendar-event me-2 text-muted"></i>
-                                    <span>{{ cert.fecha }}</span>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-success px-3 py-2">
-                                    <i class="bi bi-check-circle me-1"></i>
-                                    Certificado
-                                </span>
-                            </td>
-                        </tr>
-                        
-                        <tr *ngIf="noHayResultadosConBusqueda" class="text-center">
-                            <td colspan="5" class="py-5">
-                                <div class="text-muted">
-                                    <i class="bi bi-exclamation-triangle fs-1 d-block mb-3 text-warning"></i>
-                                    <h5 class="text-warning">No se encontraron certificaciones</h5>
-                                    <p class="mb-0">
-                                        No existe un empleado con el ID: 
-                                        <strong class="text-danger">{{ numeroEmpleado }}</strong>
-                                    </p>
-                                    <small class="text-muted mt-2 d-block">Verifica el número e intenta nuevamente</small>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        <tr *ngIf="tableCertificaciones.length === 0 && noHayBusqueda" class="text-center">
-                            <td colspan="5" class="py-5">
-                                <div class="text-muted">
-                                    <i class="bi bi-search fs-1 d-block mb-3 text-info"></i>
-                                    <h5 class="text-info">Búsqueda de Certificaciones</h5>
-                                    <p class="mb-0">Ingresa un ID de empleado para buscar certificaciones</p>
-                                    <small class="text-muted mt-2 d-block">IDs disponibles: 1001, 1002, 1003, 1004, 1005</small>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Estadísticas -->
+    @if (numeroEmpleadoValido && tieneCertificaciones) {
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="stats-card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="bi bi-graph-up me-2"></i>
+                Resumen de Certificaciones
+              </h5>
             </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-6 col-md-2">
+                  <div class="stat-item">
+                    <div class="stat-number">{{ estadisticas().total }}</div>
+                    <div class="stat-label">Total</div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2">
+                  <div class="stat-item">
+                    <div class="stat-number text-success">{{ estadisticas().porcentaje100 }}</div>
+                    <div class="stat-label">100%</div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2">
+                  <div class="stat-item">
+                    <div class="stat-number text-warning">{{ estadisticas().porcentaje75 }}</div>
+                    <div class="stat-label">75%</div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2">
+                  <div class="stat-item">
+                    <div class="stat-number text-info">{{ estadisticas().porcentaje50 }}</div>
+                    <div class="stat-label">50%</div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2">
+                  <div class="stat-item">
+                    <div class="stat-number text-secondary">{{ estadisticas().porcentaje25 }}</div>
+                    <div class="stat-label">25%</div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2">
+                  <div class="stat-item">
+                    <div class="stat-number text-primary">{{ estadisticas().promedio }}%</div>
+                    <div class="stat-label">Promedio</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-    </div>
+      </div>
+
+      <!-- Filtros por Línea -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="filters-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-3">
+                <h6 class="mb-0 me-3">
+                  <i class="bi bi-funnel me-2"></i>
+                  Filtrar por línea:
+                </h6>
+                <div class="filter-buttons">
+                  <button 
+                    type="button"
+                    class="btn btn-filter"
+                    [class.active]="filtroLinea() === 'todas'"
+                    (click)="filtrarPorLinea('todas')"
+                  >
+                    Todas ({{ estadisticas().total }})
+                  </button>
+                  @for (linea of lineasDisponibles(); track linea) {
+                    <button 
+                      type="button"
+                      class="btn btn-filter"
+                      [class.active]="filtroLinea() === linea"
+                      (click)="filtrarPorLinea(linea)"
+                    >
+                      {{ linea.split(' - ')[1] }}
+                      ({{ contarCertificacionesPorLinea(linea) }})
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Certificaciones -->
+      <div class="row">
+        <div class="col-12">
+          <div class="table-card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="bi bi-table me-2"></i>
+                Certificaciones de {{ datosEmpleado()?.nombre }}
+                @if (filtroLinea() !== 'todas') {
+                  <small class="text-muted">- {{ filtroLinea() }}</small>
+                }
+              </h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-header">
+                    <tr>
+                      <th scope="col">Línea</th>
+                      <th scope="col">Operación</th>
+                      <th scope="col">Programa</th>
+                      <th scope="col">Certificación</th>
+                      <th scope="col">Fecha</th>
+                      <th scope="col">Entrenador</th>
+                      <th scope="col">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (certificacion of certificacionesFiltradas(); track certificacion.id) {
+                      <tr class="table-row">
+                        <td>
+                          <div class="cell-content">
+                            <strong>{{ certificacion.linea.split(' - ')[1] }}</strong>
+                            <small class="text-muted d-block">{{ certificacion.linea.split(' - ')[0] }}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="cell-content">
+                            {{ certificacion.operacion.split(' - ')[1] }}
+                            <small class="text-muted d-block">{{ certificacion.operacion.split(' - ')[0] }}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="cell-content">
+                            {{ certificacion.programa.split(' - ')[1] }}
+                            <small class="text-muted d-block">{{ certificacion.programa.split(' - ')[0] }}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="badge certification-badge" [class]="obtenerClasePorcentaje(certificacion.porcentajeCertificacion)">
+                            {{ certificacion.porcentajeCertificacion }}%
+                          </span>
+                        </td>
+                        <td>
+                          <div class="cell-content">
+                            {{ formatearFecha(certificacion.fechaCertificacion) }}
+                          </div>
+                        </td>
+                        <td>
+                          <div class="cell-content">
+                            {{ certificacion.entrenador }}
+                          </div>
+                        </td>
+                        <td>
+                          <span class="badge badge-success">
+                            {{ certificacion.estado }}
+                          </span>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                          <i class="bi bi-inbox me-2"></i>
+                          No se encontraron certificaciones para este filtro
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Estado sin empleado -->
+    @if (!numeroEmpleadoValido) {
+      <div class="row">
+        <div class="col-12">
+          <div class="empty-state">
+            <div class="empty-icon">
+              <i class="bi bi-person-plus"></i>
+            </div>
+            <h4>Buscar Certificaciones</h4>
+            <p class="text-muted">
+              Ingrese un número de empleado válido para consultar sus certificaciones.
+            </p>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Estado sin certificaciones -->
+    @if (numeroEmpleadoValido && !tieneCertificaciones) {
+      <div class="row">
+        <div class="col-12">
+          <div class="empty-state">
+            <div class="empty-icon">
+              <i class="bi bi-clipboard-x"></i>
+            </div>
+            <h4>Sin Certificaciones</h4>
+            <p class="text-muted">
+              El empleado {{ datosEmpleado()?.nombre }} no tiene certificaciones registradas.
+            </p>
+          </div>
+        </div>
+      </div>
+    }
+
+  </div>
 </div>

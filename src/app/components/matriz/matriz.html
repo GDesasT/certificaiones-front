@@ -1,0 +1,191 @@
+<div class="matriz-wrapper">
+  <div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="header-card">
+          <div class="header-content">
+            <h2 class="header-title">
+              <i class="bi bi-grid-3x3-gap-fill me-2"></i>
+              MATRIZ DE ENTRENAMIENTO
+            </h2>
+            <div class="company-logo">
+              <span class="logo-text">GLOBAL SOFT PARTNER</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="controls-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <!-- Filtros por línea -->
+              <div class="filter-section">
+                <h6 class="mb-2">
+                  <i class="bi bi-funnel me-2"></i>
+                  Filtrar por línea:
+                </h6>
+                <div class="filter-buttons">
+                  <button 
+                    type="button"
+                    class="btn btn-filter"
+                    [class.active]="lineaSeleccionada() === 'todas'"
+                    (click)="filtrarPorLinea('todas')"
+                  >
+                    Todas las líneas
+                  </button>
+                  @for (linea of lineasDisponibles(); track linea) {
+                    <button 
+                      type="button"
+                      class="btn btn-filter"
+                      [class.active]="lineaSeleccionada() === linea"
+                      (click)="filtrarPorLinea(linea)"
+                    >
+                      {{ linea.split(' - ')[1] || linea }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Botón Exportar -->
+              <div class="export-section">
+                <button 
+                  type="button" 
+                  class="btn btn-export"
+                  (click)="exportarPDF()"
+                >
+                  <i class="bi bi-file-earmark-pdf me-2"></i>
+                  Exportar PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Matriz de Entrenamiento -->
+    <div class="row">
+      <div class="col-12">
+        <div class="matriz-card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="bi bi-table me-2"></i>
+              Competencias / Operaciones - 
+              @if (lineaSeleccionada() === 'todas') {
+                <span class="text-muted">Todas las líneas</span>
+              } @else {
+                <span class="text-muted">{{ lineaSeleccionada().split(' - ')[1] || lineaSeleccionada() }}</span>
+              }
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive matriz-table-container">
+              <table class="table matriz-table mb-0">
+                <thead class="table-header sticky-header">
+                  <tr>
+                    <th class="empleado-header">
+                      <div class="header-content">
+                        <div class="header-main">#</div>
+                        <div class="header-sub">EMPLEADO</div>
+                      </div>
+                    </th>
+                    <th class="nombre-header">
+                      <div class="header-content">
+                        <div class="header-main">NOMBRE</div>
+                      </div>
+                    </th>
+                    @for (operacion of operacionesPorLinea(); track operacion; let i = $index) {
+                      <th class="operacion-header">
+                        <div class="header-content">
+                          <div class="header-main">{{ formatearOperacion(operacion).codigo }}</div>
+                          <div class="header-sub">{{ formatearOperacion(operacion).nombre }}</div>
+                        </div>
+                      </th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (fila of matrizData(); track fila.empleado.numero) {
+                    <tr class="matriz-row">
+                      <td class="empleado-cell">
+                        <strong>{{ fila.empleado.numero }}</strong>
+                      </td>
+                      <td class="nombre-cell">
+                        <div class="empleado-info">
+                          <span class="empleado-nombre">{{ fila.empleado.nombre }}</span>
+                        </div>
+                      </td>
+                      @for (operacion of operacionesPorLinea(); track operacion) {
+                        <td class="cert-cell">
+                          <div 
+                            class="cert-badge" 
+                            [class]="obtenerClasePorcentaje(fila.certificaciones[operacion])"
+                          >
+                            @if (fila.certificaciones[operacion] > 0) {
+                              {{ fila.certificaciones[operacion] }}%
+                            } @else {
+                              -
+                            }
+                          </div>
+                        </td>
+                      }
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td [attr.colspan]="operacionesPorLinea().length + 2" class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox me-2"></i>
+                        No hay datos disponibles para mostrar
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leyenda -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="legend-card">
+          <div class="card-body">
+            <h6 class="mb-3">
+              <i class="bi bi-info-circle me-2"></i>
+              Leyenda de Porcentajes
+            </h6>
+            <div class="d-flex flex-wrap gap-3 align-items-center">
+              <div class="legend-item">
+                <div class="cert-badge cert-none">-</div>
+                <span class="legend-text">Sin certificar</span>
+              </div>
+              <div class="legend-item">
+                <div class="cert-badge cert-25">25%</div>
+                <span class="legend-text">Básico</span>
+              </div>
+              <div class="legend-item">
+                <div class="cert-badge cert-50">50%</div>
+                <span class="legend-text">Intermedio</span>
+              </div>
+              <div class="legend-item">
+                <div class="cert-badge cert-75">75%</div>
+                <span class="legend-text">Avanzado</span>
+              </div>
+              <div class="legend-item">
+                <div class="cert-badge cert-100">100%</div>
+                <span class="legend-text">Certificado</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

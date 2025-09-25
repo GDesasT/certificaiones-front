@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { Home } from './components/home/home';
+import { Certificar } from './components/certificar/certificar';
 import { Certificaciones } from './components/certificaciones/certificaciones';
+import { Matriz } from './components/matriz/matriz';
 
 export const routes: Routes = [
   {
@@ -14,18 +16,15 @@ export const routes: Routes = [
   },
   {
     path: 'certificar',
-    loadComponent: () => import('./components/home/home').then(m => m.Home)
-    // TODO: Crear componente de certificar
+    component: Certificar
   },
   {
     path: 'certificaciones',
-    loadComponent: () => import('./components/certificaciones/certificaciones').then(m => m.Certificaciones)
-    // TODO: Crear componente de certificaciones
+    component: Certificaciones
   },
   {
     path: 'matriz-entrenamiento',
-    loadComponent: () => import('./components/home/home').then(m => m.Home)
-    // TODO: Crear componente de matriz de entrenamiento
+    component: Matriz
   },
   {
     path: '**',
