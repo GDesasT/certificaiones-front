@@ -36,10 +36,18 @@
                     Ingrese un número de empleado válido (4 dígitos)
                   </div>
                 </div>
-                <div class="col-md-9">
+                <div class="col-md-5">
                   <label class="form-label">Nombre</label>
                   <input type="text" class="form-control auto-filled" formControlName="nombre"
                          placeholder="El nombre se llenará automáticamente" readonly>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label required">No. Empleado Entrenador</label>
+                  <input type="text" class="form-control" formControlName="trainerNumber" placeholder="Ej. 5678" maxlength="4" (input)="onTrainerNumberInput($event)">
+                  <div class="invalid-feedback d-block"
+                       *ngIf="certificacionForm.get('trainerNumber')?.invalid && certificacionForm.get('trainerNumber')?.touched">
+                    Ingrese el número de empleado del entrenador (4 dígitos)
+                  </div>
                 </div>
               </div>
   <div class="row g-3 mt-2">
@@ -234,7 +242,7 @@
         <div class="progress-info">
           <span class="progress-text">
             Competencias completadas: {{ getCompetenciasCompletadas(modalActivo()!) }}
-            de {{ competenciasPorPorcentaje[modalActivo()!]?.length || 0 }}
+            de {{ competenciasPorPorcentaje[modalActivo()!].length || 0 }}
           </span>
           <div class="progress-bar-container">
             <div class="progress-bar" [style.width.%]="getPorcentajeProgreso(modalActivo()!)"></div>

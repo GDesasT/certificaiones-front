@@ -3,6 +3,8 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CertificacionesService } from '../../services/certificaciones.service';
+import Swal from 'sweetalert2';
+import { COMPETENCIAS_25_MOCK, COMPETENCIAS_50_MOCK, COMPETENCIAS_75_MOCK, COMPETENCIAS_100_MOCK } from '../../models/certificacion.models';
 
 interface Catalogo { id: number; nombre?: string; name?: string; }
 
@@ -44,6 +46,7 @@ export class Certificar implements OnInit {
     this.certificacionForm.patchValue({ fechaEvaluacion: this.hoyISO() });
     this.cargarAreas();
     this.wireCascada();
+    this.initCompetencias();
   }
 
   // -------- Form --------
@@ -51,6 +54,7 @@ export class Certificar implements OnInit {
     this.certificacionForm = this.fb.group({
       numeroEmpleado: ['', [Validators.required, Validators.pattern(/^\d{4}$/)]],
       nombre: [{ value: '', disabled: true }],
+      trainerNumber: ['', [Validators.required, Validators.pattern(/^\d{4}$/)]],
 
       // NUEVO: área
       areaId: ['', Validators.required],
@@ -64,7 +68,7 @@ export class Certificar implements OnInit {
       notas: ['']
     });
 
-    // Nombre automático
+  // Nombre automático
     this.certificacionForm.get('numeroEmpleado')?.valueChanges.subscribe((num: string) => {
       if (!num || num.length !== 4) { this.resetEmpleado(); return; }
       this.api.findUserByNumber(num).subscribe({
@@ -72,8 +76,14 @@ export class Certificar implements OnInit {
           const nombre = user?.name ?? null;
           this.empleadoActual.set({ numero: num, nombre });
           this.certificacionForm.patchValue({ nombre: nombre ?? '' });
+
+          // Cargar historial del empleado para conocer su porcentaje actual por operación
+          this.cargarHistorialEmpleado(num);
         },
-        error: _ => { this.empleadoActual.set({ numero: num, nombre: null }); this.certificacionForm.patchValue({ nombre: '' }); }
+        error: _ => {
+          this.empleadoActual.set({ numero: num, nombre: null });
+          this.certificacionForm.patchValue({ nombre: '' });
+        }
       });
     });
   }
@@ -158,6 +168,41 @@ export class Certificar implements OnInit {
     this.certificacionForm.get('operacionId')?.disable();
   }
 
+  private initCompetencias(): void {
+    // Mapear mocks a la forma { id, descripcion }
+    const mapIt = (arr: Array<{ id: string; descripcion: string } | any>) =>
+      (arr || []).map((c: any) => ({ id: String(c.id), descripcion: String(c.descripcion) }));
+
+    this.competenciasPorPorcentaje = {
+      25: mapIt(COMPETENCIAS_25_MOCK),
+      50: mapIt(COMPETENCIAS_50_MOCK),
+      75: mapIt(COMPETENCIAS_75_MOCK),
+      100: mapIt(COMPETENCIAS_100_MOCK)
+    };
+  }
+
+  // -------- Historial del empleado y percent actual --------
+  private historial = signal<Array<{ operation_id: number; porcentaje: number }>>([]);
+
+  private cargarHistorialEmpleado(num: string) {
+    this.api.getCertificationsByEmployee(num).subscribe({
+      next: (arr: any[]) => {
+        const hist = (arr || []).map(r => ({
+          operation_id: Number(r?.operation_id ?? r?.operacion_id ?? r?.operation?.id ?? 0),
+          porcentaje: Number(r?.porcentaje ?? r?.percentage ?? r?.porcentajeCertificacion ?? 0)
+        })).filter(x => x.operation_id > 0);
+        this.historial.set(hist);
+      },
+      error: _ => this.historial.set([])
+    });
+  }
+
+  private porcentajeActualOperacion(opId: number): number {
+    const h = this.historial();
+    const it = h.find(x => Number(x.operation_id) === Number(opId));
+    return it ? Number(it.porcentaje) : 0;
+  }
+
   // -------- Helpers UI --------
   hoyISO(): string { return new Date().toISOString().split('T')[0]; }
   nombreDe(lista: Catalogo[], id: number, fallback: string): string {
@@ -169,10 +214,22 @@ export class Certificar implements OnInit {
   nombrePrograma() { return this.nombreDe(this.programasApi,  this.certificacionForm.value.programaId, 'Programa'); }
   nombreOperacion(){ return this.nombreDe(this.operacionesApi,this.certificacionForm.value.operacionId,'Operación'); }
 
+  // Nota: retiramos la deshabilitación por nivel; ahora solo mostramos alerta si es menor o igual.
+
   // -------- Modal / Competencias (igual que ya tenías) --------
   abrirModal(p: number) {
     if (!this.puedeIniciarCertificacion) {
-      alert('Complete No. empleado, área, línea, programa y operación.');
+      Swal.fire({ icon: 'info', title: 'Faltan datos', text: 'Completa No. empleado, área, línea, programa y operación.' });
+      return;
+    }
+    const opId = Number(this.certificacionForm.value.operacionId);
+    const actual = this.porcentajeActualOperacion(opId);
+    if (p === actual) {
+      Swal.fire({ icon: 'info', title: 'Ya está en este nivel', text: `El empleado ya tiene ${actual}%.` });
+      return;
+    }
+    if (p < actual) {
+      Swal.fire({ icon: 'warning', title: 'Nivel menor no permitido', text: `El empleado ya tiene ${actual}%. Solo puedes aumentar.` });
       return;
     }
     this.modalAbierto.set(p);
@@ -206,23 +263,57 @@ export class Certificar implements OnInit {
   // -------- Acción principal --------
   certificarEmpleado(porcentaje: number) {
     if (!this.verificarCompetenciasCompletas(porcentaje)) {
-      alert('Debe completar todas las competencias.');
+      Swal.fire({ icon: 'warning', title: 'Completa las competencias', text: 'Debes completar todas las competencias seleccionadas.' });
       return;
     }
     const raw = this.certificacionForm.getRawValue();
-    const payload = {
-      number_employee: String(raw.numeroEmpleado),
-      operation_id: Number(raw.operacionId), // ← operación ya filtrada por programa
-      porcentaje,
-      fecha_certificacion: String(raw.fechaEvaluacion),
-      notas: (raw.notas ?? '').trim() || null
-    };
+    const opId = Number(raw.operacionId);
+    const actual = this.porcentajeActualOperacion(opId);
+    const notas = (raw.notas ?? '').trim() || null;
+
+    // No permitir bajar
+    if (porcentaje < actual) {
+      Swal.fire({ icon: 'warning', title: 'No puedes bajar el nivel', text: `Nivel actual: ${actual}%.` });
+      return;
+    }
+
     this.cargandoGuardado.set(true);
-    this.api.createCertification(payload).subscribe({
-      next: _ => { alert(`Empleado certificado al ${porcentaje}%`); this.cerrarModal(); },
-      error: e => alert(e?.error?.error || e?.error?.message || 'Error al guardar'),
-      complete: () => this.cargandoGuardado.set(false)
-    });
+    if (actual > 0) {
+      // Actualiza porcentaje (PUT)
+      this.api.updateCertificationPercent({
+        number_employee: String(raw.numeroEmpleado),
+        operation_id: opId,
+        porcentaje,
+        notas
+      }).subscribe({
+        next: _ => {
+          Swal.fire({ icon: 'success', title: 'Actualizado', text: `Nuevo nivel: ${porcentaje}%` });
+          this.cerrarModal();
+          // refrescar historial para reflejar nuevo nivel
+          this.cargarHistorialEmpleado(String(raw.numeroEmpleado));
+        },
+        error: e => Swal.fire({ icon: 'error', title: 'Error al actualizar', text: e?.error?.error || e?.error?.message || 'Ocurrió un error' }),
+        complete: () => this.cargandoGuardado.set(false)
+      });
+    } else {
+      // Crea certificación (POST)
+      this.api.createCertification({
+        number_employee: String(raw.numeroEmpleado),
+        trainer_number_employee: String(raw.trainerNumber),
+        operation_id: opId,
+        porcentaje,
+        fecha_certificacion: String(raw.fechaEvaluacion),
+        notas
+      }).subscribe({
+        next: _ => {
+          Swal.fire({ icon: 'success', title: 'Certificación creada', text: `Nivel: ${porcentaje}%` });
+          this.cerrarModal();
+          this.cargarHistorialEmpleado(String(raw.numeroEmpleado));
+        },
+        error: e => Swal.fire({ icon: 'error', title: 'Error al guardar', text: e?.error?.error || e?.error?.message || 'Ocurrió un error' }),
+        complete: () => this.cargandoGuardado.set(false)
+      });
+    }
   }
 
   // -------- Getters de estado --------
@@ -230,8 +321,12 @@ export class Certificar implements OnInit {
     const c = this.certificacionForm.get('numeroEmpleado');
     return !!(c && c.valid && c.value);
   }
+  get trainerNumberValido(): boolean {
+    const c = this.certificacionForm.get('trainerNumber');
+    return !!(c && c.valid && c.value);
+  }
   get formularioCompleto(): boolean {
-    return this.numeroEmpleadoValido &&
+    return this.numeroEmpleadoValido && this.trainerNumberValido &&
            !!this.certificacionForm.value.areaId &&
            !!this.certificacionForm.value.lineaId &&
            !!this.certificacionForm.value.programaId &&
@@ -244,6 +339,11 @@ export class Certificar implements OnInit {
     const v = String(e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4);
     e.target.value = v;
     this.certificacionForm.patchValue({ numeroEmpleado: v });
+  }
+  onTrainerNumberInput(e: any) {
+    const v = String(e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4);
+    e.target.value = v;
+    this.certificacionForm.patchValue({ trainerNumber: v });
   }
 
   // -------- Utilidades de filtrado defensivo --------

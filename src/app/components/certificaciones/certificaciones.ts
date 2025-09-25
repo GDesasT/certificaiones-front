@@ -182,6 +182,21 @@ export class Certificaciones implements OnInit {
       programa = this.composeLabel('', progId ? `PG${progId}` : '');
     }
 
+    // Entrenador (puede venir como objeto, string o campos separados)
+    const trainerObj = (r.entrenador ?? r.trainer ?? r.user_trainer ?? null);
+    let entrenador = '';
+    if (trainerObj && typeof trainerObj === 'object') {
+      const tName = trainerObj.name || trainerObj.nombre || '';
+      const tNum  = trainerObj.number_employee || trainerObj.employee_number || trainerObj.numeroEmpleado || trainerObj.numero || '';
+      entrenador = this.composeLabel(String(tNum), String(tName));
+    } else if (typeof trainerObj === 'string') {
+      entrenador = trainerObj;
+    } else {
+      const tName = r.trainer_name || r.user_trainer_name || r.nombre_entrenador || '';
+      const tNum  = r.trainer_number_employee || r.user_trainer_number || r.numero_entrenador || '';
+      entrenador = this.composeLabel(String(tNum), String(tName));
+    }
+
     return {
       id: String(r.id ?? r.cert_id ?? r.certifier_id ?? r.certificacion_id ?? this.randomId()),
       numeroEmpleado: String(r.number_employee ?? r.numeroEmpleado ?? r.employee_number ?? ''),
@@ -192,7 +207,7 @@ export class Certificaciones implements OnInit {
       programa,
       porcentajeCertificacion: Number(r.porcentaje ?? r.porcentajeCertificacion ?? r.percent ?? 0),
       fechaCertificacion: new Date(r.fecha_certificacion ?? r.fechaCertificacion ?? r.created_at ?? Date.now()),
-      entrenador: String(r.entrenador ?? r.trainer ?? r.user_trainer ?? ''),
+      entrenador,
       estado: 'Activa'
     };
   }

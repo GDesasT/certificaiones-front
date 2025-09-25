@@ -42,6 +42,7 @@ export class CertificacionesService {
 
   createCertification(payload: {
     number_employee: string;
+    trainer_number_employee?: string;
     operation_id: number;
     porcentaje: number;
     fecha_certificacion: string;
@@ -50,10 +51,33 @@ export class CertificacionesService {
     return this.http.post(`${this.base}/certifiers`, payload);
   }
 
+  // Actualiza solo el porcentaje de una certificación existente (no permite bajar en UI)
+  updateCertificationPercent(payload: {
+    number_employee: string;
+    operation_id: number;
+    porcentaje: number;
+    notas?: string | null;
+  }) {
+    return this.http.put(`${this.base}/certifiers/update-percent`, payload);
+  }
+
   // Historial de certificaciones por empleado
   getCertificationsByEmployee(number_employee: string) {
     return this.http
       .get<any>(`${this.base}/certifiers-by-employee/${encodeURIComponent(number_employee)}`)
+      .pipe(
+        map((r: any) => {
+          const candidates = [r?.certificaciones, r?.certifiers, r?.data, r?.items, r?.rows, r?.result, r?.results, r];
+          const firstArray = candidates.find((x) => Array.isArray(x));
+          return (firstArray as any[]) ?? [];
+        })
+      );
+  }
+
+  // Certificaciones globales con datos de usuario (para Matriz)
+  getCertifiersWithUsers() {
+    return this.http
+      .get<any>(`${this.base}/certifiers-with-users`)
       .pipe(
         map((r: any) => {
           const candidates = [r?.certificaciones, r?.certifiers, r?.data, r?.items, r?.rows, r?.result, r?.results, r];
