@@ -178,7 +178,6 @@
                       <th scope="col">Programa</th>
                       <th scope="col">Certificación</th>
                       <th scope="col">Fecha</th>
-                      <th scope="col">Entrenador</th>
                       <th scope="col">Estado</th>
                     </tr>
                   </thead>
@@ -187,8 +186,11 @@
                       <tr class="table-row">
                         <td>
                           <div class="cell-content">
-                            <strong>{{ certificacion.linea.split(' - ')[1] }}</strong>
-                            <small class="text-muted d-block">{{ certificacion.linea.split(' - ')[0] }}</small>
+                            @if (certificacion.area) {
+                              <span class="badge bg-light text-dark mb-1">{{ certificacion.area }}</span>
+                            }
+                            <strong>{{ (certificacion.linea || '').split(' - ')[1] || certificacion.linea || '—' }}</strong>
+                            <small class="text-muted d-block">{{ (certificacion.linea || '').split(' - ')[0] }}</small>
                           </div>
                         </td>
                         <td>
@@ -211,11 +213,6 @@
                         <td>
                           <div class="cell-content">
                             {{ formatearFecha(certificacion.fechaCertificacion) }}
-                          </div>
-                        </td>
-                        <td>
-                          <div class="cell-content">
-                            {{ certificacion.entrenador }}
                           </div>
                         </td>
                         <td>

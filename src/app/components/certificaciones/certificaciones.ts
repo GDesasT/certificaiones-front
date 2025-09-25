@@ -1,13 +1,17 @@
 import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { CertificacionHistorial, CERTIFICACIONES_HISTORIAL_MOCK } from '../../models/certificacion.models';
+import { CertificacionHistorial } from '../../models/certificacion.models';
+import { CertificacionesService } from '../../services/certificaciones.service';
 
 // Datos temporales de empleados (mismos que certificar)
 interface EmpleadoTemp {
   numero: string;
   nombre: string;
 }
+
+// Tipo extendido localmente para incluir 'area'
+interface CertificacionHistorialExt extends CertificacionHistorial { area?: string }
 
 @Component({
   selector: 'app-certificaciones',
@@ -19,20 +23,20 @@ interface EmpleadoTemp {
 export class Certificaciones implements OnInit {
   // Signals para el estado del componente
   private readonly empleadoActual = signal<EmpleadoTemp | null>(null);
-  private readonly certificacionesEmpleado = signal<CertificacionHistorial[]>([]);
+  private readonly certificacionesEmpleado = signal<CertificacionHistorialExt[]>([]);
   private readonly filtroLineaActiva = signal<string>('todas');
 
   // Form reactivo
   busquedaForm!: FormGroup;
 
-  // Datos temporales (mismos empleados)
+  // Datos temporales (deprecado, se usará API). Dejamos como fallback si API falla.
   readonly empleadosTemp: EmpleadoTemp[] = [
     { numero: '6685', nombre: 'Juan Gerardo Alcantar' },
     { numero: '7218', nombre: 'Nestor Daniel Cabrera Garcia' }
   ];
 
-  // Todas las certificaciones mock
-  readonly todasCertificaciones = CERTIFICACIONES_HISTORIAL_MOCK;
+  // Fuente de datos: se llena desde API al buscar un empleado
+  private readonly todasCertificaciones = signal<CertificacionHistorialExt[]>([]);
 
   // Computed para obtener datos filtrados
   readonly datosEmpleado = computed(() => this.empleadoActual());
@@ -71,7 +75,7 @@ export class Certificaciones implements OnInit {
     };
   });
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private api: CertificacionesService) {
     this.inicializarFormulario();
   }
 
@@ -96,29 +100,112 @@ export class Certificaciones implements OnInit {
   }
 
   private buscarEmpleado(numero: string): void {
-    if (numero && numero.length === 4) {
-      const empleado = this.empleadosTemp.find(emp => emp.numero === numero);
-      if (empleado) {
-        this.empleadoActual.set(empleado);
-        this.busquedaForm.patchValue({
-          nombre: empleado.nombre
-        });
-        this.cargarCertificaciones(numero);
-      } else {
-        this.limpiarDatos();
+    if (!numero || numero.length !== 4) { this.limpiarDatos(); return; }
+
+    // Primero intentamos API real
+    this.api.findUserByNumber(numero).subscribe({
+      next: (user: any) => {
+        if (user) {
+          const empleado: EmpleadoTemp = { numero, nombre: user.name ?? user.nombre ?? '' };
+          this.empleadoActual.set(empleado);
+          this.busquedaForm.patchValue({ nombre: empleado.nombre });
+          this.cargarCertificaciones(numero);
+        } else {
+          // Fallback a mock temporal si API no devuelve usuario
+          const emp = this.empleadosTemp.find(e => e.numero === numero) || null;
+          if (emp) {
+            this.empleadoActual.set(emp);
+            this.busquedaForm.patchValue({ nombre: emp.nombre });
+            this.cargarCertificaciones(numero);
+          } else {
+            this.limpiarDatos();
+          }
+        }
+      },
+      error: _ => {
+        // Fallback a mock
+        const emp = this.empleadosTemp.find(e => e.numero === numero) || null;
+        if (emp) {
+          this.empleadoActual.set(emp);
+          this.busquedaForm.patchValue({ nombre: emp.nombre });
+          this.cargarCertificaciones(numero);
+        } else {
+          this.limpiarDatos();
+        }
       }
-    } else {
-      this.limpiarDatos();
-    }
+    });
   }
 
   private cargarCertificaciones(numeroEmpleado: string): void {
-    const certificaciones = this.todasCertificaciones
-      .filter(cert => cert.numeroEmpleado === numeroEmpleado)
-      .sort((a, b) => b.fechaCertificacion.getTime() - a.fechaCertificacion.getTime());
-    
-    this.certificacionesEmpleado.set(certificaciones);
-    this.filtroLineaActiva.set('todas');
+    this.api.getCertificationsByEmployee(numeroEmpleado).subscribe({
+      next: (rows: any[]) => {
+        const arr = Array.isArray(rows) ? rows : [];
+        const mapped: CertificacionHistorialExt[] = arr.map((r: any) => this.mapRowToCert(r))
+          .sort((a, b) => b.fechaCertificacion.getTime() - a.fechaCertificacion.getTime());
+        this.todasCertificaciones.set(mapped);
+        this.certificacionesEmpleado.set(mapped);
+        this.filtroLineaActiva.set('todas');
+      },
+      error: _ => {
+        this.todasCertificaciones.set([]);
+        this.certificacionesEmpleado.set([]);
+        this.filtroLineaActiva.set('todas');
+      }
+    });
+  }
+
+  private mapRowToCert(r: any): CertificacionHistorialExt {
+    // Campos anidados que viene en la respuesta compartida
+    const op = r.operation || r.operacion || {};
+    const opCode = op.number_operation || op.code || op.numero || '';
+    const opName = op.name || op.nombre || '';
+    const progId = op.programa_id || op.program_id || r.programa_id || r.program_id || '';
+
+    // Programa: puede venir como objeto al nivel raíz o dentro de operation
+    const programObj = r.program || r.programa || op.program || op.programa || {};
+    const programCode = programObj.code || programObj.codigo || programObj.number_program || programObj.number || '';
+    const programName = programObj.name || programObj.nombre || '';
+
+  // Área y Línea (nuevos en API)
+  const areaObj = r.area || {};
+  const areaCode = areaObj.code || areaObj.codigo || areaObj.number_area || r.area_code || r.area_codigo || '';
+  const areaName = areaObj.name || areaObj.nombre || r.area_name || r.area_nombre || r.area || '';
+  const area = this.composeLabel(areaCode, areaName);
+
+  const lineObj = r.line || r.linea || {};
+  const lineCode = lineObj.code || lineObj.codigo || lineObj.number_line || r.line_code || r.linea_codigo || '';
+  const lineName = lineObj.name || lineObj.nombre || r.line_name || r.linea_nombre || r.linea || '';
+  const linea = this.composeLabel(lineCode, lineName);
+    const operacion = this.composeLabel(opCode, opName);
+    let programa = this.composeLabel(programCode, programName);
+    if (!programa) {
+      programa = this.composeLabel('', progId ? `PG${progId}` : '');
+    }
+
+    return {
+      id: String(r.id ?? r.cert_id ?? r.certifier_id ?? r.certificacion_id ?? this.randomId()),
+      numeroEmpleado: String(r.number_employee ?? r.numeroEmpleado ?? r.employee_number ?? ''),
+      nombre: String(r.user_name ?? r.nombre ?? r.employee_name ?? ''),
+      area,
+      linea,
+      operacion,
+      programa,
+      porcentajeCertificacion: Number(r.porcentaje ?? r.porcentajeCertificacion ?? r.percent ?? 0),
+      fechaCertificacion: new Date(r.fecha_certificacion ?? r.fechaCertificacion ?? r.created_at ?? Date.now()),
+      entrenador: String(r.entrenador ?? r.trainer ?? r.user_trainer ?? ''),
+      estado: 'Activa'
+    };
+  }
+
+  private composeLabel(code: string, name: string): string {
+    const c = (code || '').toString().trim();
+    const n = (name || '').toString().trim();
+    if (c && n) return `${c} - ${n}`;
+    return c || n || '';
+  }
+
+  private randomId(): string {
+    return 'r' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 
   private limpiarDatos(): void {

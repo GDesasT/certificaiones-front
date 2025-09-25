@@ -1,288 +1,258 @@
-import { Component, signal, computed, OnInit } from '@angular/core';
+// src/app/components/certificar/certificar.ts
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { 
-  COMPETENCIAS_25_MOCK,
-  COMPETENCIAS_50_MOCK,
-  COMPETENCIAS_75_MOCK,
-  COMPETENCIAS_100_MOCK,
-  Competencia
-} from '../../models/certificacion.models';
+import { CertificacionesService } from '../../services/certificaciones.service';
 
-// Datos temporales simples para pruebas
-interface EmpleadoTemp {
-  numero: string;
-  nombre: string;
-  linea: string;
-  operacion: string;
-  programa: string;
-}
+interface Catalogo { id: number; nombre?: string; name?: string; }
 
 @Component({
   selector: 'app-certificar',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './certificar.html',
-  styleUrl: './certificar.css'
+  styleUrls: ['./certificar.css']
 })
 export class Certificar implements OnInit {
-  // Signals para el estado del componente
-  private readonly empleadoActual = signal<EmpleadoTemp | null>(null);
+  private readonly empleadoActual = signal<{ numero: string; nombre: string | null } | null>(null);
   private readonly modalAbierto = signal<number | null>(null);
-  readonly competenciasSeleccionadas = signal<{[key: string]: boolean}>({});
   private readonly cargandoGuardado = signal(false);
+  readonly competenciasSeleccionadas = signal<{ [id: string]: boolean }>({});
 
-  // Form reactivo
-  certificacionForm!: FormGroup;
-  
-  // Datos temporales simples (solo los 2 empleados que solicitas)
-  readonly empleadosTemp: EmpleadoTemp[] = [
-    { 
-      numero: '6685', 
-      nombre: 'Juan Gerardo Alcantar',
-      linea: '',
-      operacion: '', 
-      programa: ''
-    },
-    { 
-      numero: '7218', 
-      nombre: 'Nestor Daniel Cabrera Garcia',
-      linea: '',
-      operacion: '', 
-      programa: ''
-    }
-  ];
-
-  // Datos temporales para los dropdowns
-  readonly lineasDisponibles = [
-    'Línea 1 - Ensamble Principal',
-    'Línea 2 - Soldadura Especializada',
-    'Línea 3 - Pintura y Acabado',
-    'Línea 4 - Control de Calidad',
-    'Línea 5 - Empaque y Distribución',
-    'Línea 6 - Corte y Preparación'
-  ];
-
-  readonly operacionesDisponibles = [
-    'Operación A - Corte de Materiales',
-    'Operación B - Ensamble de Componentes',
-    'Operación C - Soldadura de Piezas',
-    'Operación D - Control de Calidad',
-    'Operación E - Pintura y Acabado',
-    'Operación F - Empaque Final',
-    'Operación G - Inspección Técnica'
-  ];
-
-  readonly programasDisponibles = [
-    'Programa Básico - Nivel 1',
-    'Programa Intermedio - Nivel 2',
-    'Programa Avanzado - Nivel 3',
-    'Programa Especializado - Nivel 4',
-    'Programa Master - Nivel 5'
-  ];
-
-  // Competencias por porcentaje
-  readonly competenciasPorPorcentaje: {[key: number]: Competencia[]} = {
-    25: [...COMPETENCIAS_25_MOCK],
-    50: [...COMPETENCIAS_50_MOCK],
-    75: [...COMPETENCIAS_75_MOCK],
-    100: [...COMPETENCIAS_100_MOCK]
-  };
-
-  // Computed para obtener el empleado actual
   readonly datosEmpleado = computed(() => this.empleadoActual());
   readonly modalActivo = computed(() => this.modalAbierto());
   readonly guardando = computed(() => this.cargandoGuardado());
 
-  constructor(private fb: FormBuilder) {
-    this.inicializarFormulario();
+  certificacionForm!: FormGroup;
+
+  // Catálogos en cascada
+  areasApi: Catalogo[] = [];
+  lineasApi: Catalogo[] = [];
+  programasApi: Catalogo[] = [];
+  operacionesApi: Catalogo[] = [];
+
+  // Mocks de competencias (deja tus arrays)
+  competenciasPorPorcentaje: { [k: number]: { id: string; descripcion: string }[] } = {
+    25: [], 50: [], 75: [], 100: []
+  };
+
+  constructor(private fb: FormBuilder, private api: CertificacionesService) {
+    this.initForm();
   }
 
   ngOnInit(): void {
-    // Configurar la fecha automática al día de hoy
-    this.certificacionForm.patchValue({
-      fechaEvaluacion: this.obtenerFechaHoy()
-    });
+    this.certificacionForm.patchValue({ fechaEvaluacion: this.hoyISO() });
+    this.cargarAreas();
+    this.wireCascada();
   }
 
-  private inicializarFormulario(): void {
+  // -------- Form --------
+  private initForm(): void {
     this.certificacionForm = this.fb.group({
-      numeroEmpleado: ['', [
-        Validators.required, 
-        Validators.pattern(/^\d{4}$/),
-        Validators.maxLength(4)
-      ]],
-      nombre: [{value: '', disabled: true}],
-      linea: ['', Validators.required],
-      operacion: ['', Validators.required],
-      programa: ['', Validators.required],
-      fechaEvaluacion: [{value: '', disabled: true}, Validators.required]
+      numeroEmpleado: ['', [Validators.required, Validators.pattern(/^\d{4}$/)]],
+      nombre: [{ value: '', disabled: true }],
+
+      // NUEVO: área
+      areaId: ['', Validators.required],
+
+      // dependientes
+      lineaId: [{ value: '', disabled: true }, Validators.required],
+      programaId: [{ value: '', disabled: true }, Validators.required],
+      operacionId: [{ value: '', disabled: true }, Validators.required],
+
+      fechaEvaluacion: [{ value: '', disabled: true }, Validators.required],
+      notas: ['']
     });
 
-    // Escuchar cambios en el número de empleado
-    this.certificacionForm.get('numeroEmpleado')?.valueChanges.subscribe(numero => {
-      this.buscarEmpleado(numero);
+    // Nombre automático
+    this.certificacionForm.get('numeroEmpleado')?.valueChanges.subscribe((num: string) => {
+      if (!num || num.length !== 4) { this.resetEmpleado(); return; }
+      this.api.findUserByNumber(num).subscribe({
+        next: user => {
+          const nombre = user?.name ?? null;
+          this.empleadoActual.set({ numero: num, nombre });
+          this.certificacionForm.patchValue({ nombre: nombre ?? '' });
+        },
+        error: _ => { this.empleadoActual.set({ numero: num, nombre: null }); this.certificacionForm.patchValue({ nombre: '' }); }
+      });
     });
   }
 
-  private obtenerFechaHoy(): string {
-    const hoy = new Date();
-    return hoy.toISOString().split('T')[0];
+  // -------- Cascada: listeners --------
+  private wireCascada(): void {
+    // Área -> Líneas
+    this.certificacionForm.get('areaId')?.valueChanges.subscribe((areaId: number) => {
+      this.resetLineaProgramaOperacion();
+      if (!areaId) return;
+      this.certificacionForm.get('lineaId')?.disable();
+      this.api.getLinesByArea(Number(areaId)).subscribe({
+        next: lines => {
+          const lista = (lines ?? []);
+          this.lineasApi = this.filterByIdOptions(lista, Number(areaId), ['area_id','areaId','id_area','idArea']);
+          this.certificacionForm.get('lineaId')?.enable();
+        },
+        error: _ => { this.lineasApi = []; }
+      });
+    });
+
+    // Línea -> Programas
+    this.certificacionForm.get('lineaId')?.valueChanges.subscribe((lineId: number) => {
+      this.resetProgramaOperacion();
+      if (!lineId) { this.certificacionForm.get('programaId')?.disable(); return; }
+      this.certificacionForm.get('programaId')?.disable();
+      this.api.getProgramsByLine(Number(lineId)).subscribe({
+        next: programs => {
+          const lista = (programs ?? []);
+          this.programasApi = this.filterByIdOptions(lista, Number(lineId), ['line_id','lineId','linea_id','id_line','idLinea']);
+          this.certificacionForm.get('programaId')?.enable();
+        },
+        error: _ => { this.programasApi = []; }
+      });
+    });
+
+    // Programa -> Operaciones
+    this.certificacionForm.get('programaId')?.valueChanges.subscribe((programId: number) => {
+      this.resetOperacion();
+      if (!programId) { this.certificacionForm.get('operacionId')?.disable(); return; }
+      this.certificacionForm.get('operacionId')?.disable();
+      this.api.getOperationsByProgram(Number(programId)).subscribe({
+        next: ops => {
+          const lista = (ops ?? []);
+          this.operacionesApi = this.filterByIdOptions(lista, Number(programId), ['program_id','programId','programa_id','id_program','idPrograma']);
+          this.certificacionForm.get('operacionId')?.enable();
+        },
+        error: _ => { this.operacionesApi = []; }
+      });
+    });
   }
 
-  private buscarEmpleado(numero: string): void {
-    if (numero && numero.length === 4) {
-      const empleado = this.empleadosTemp.find(emp => emp.numero === numero);
-      if (empleado) {
-        this.empleadoActual.set(empleado);
-        this.certificacionForm.patchValue({
-          nombre: empleado.nombre
-          // No auto-llenamos línea, operación ni programa
-        });
-      } else {
-        this.limpiarDatosEmpleado();
-      }
-    } else {
-      this.limpiarDatosEmpleado();
-    }
+  // -------- Cargar catálogos raíz --------
+  private cargarAreas(): void {
+    this.api.getAreas().subscribe({
+      next: areas => this.areasApi = areas ?? [],
+      error: _ => this.areasApi = []
+    });
   }
 
-  private limpiarDatosEmpleado(): void {
+  // -------- Resets dependientes --------
+  private resetEmpleado(): void {
     this.empleadoActual.set(null);
-    this.certificacionForm.patchValue({
-      nombre: ''
-      // Mantenemos los valores seleccionados de línea, operación y programa
-    });
+    this.certificacionForm.patchValue({ nombre: '' });
+  }
+  private resetLineaProgramaOperacion(): void {
+    this.lineasApi = []; this.programasApi = []; this.operacionesApi = [];
+    this.certificacionForm.patchValue({ lineaId: '', programaId: '', operacionId: '' });
+    this.certificacionForm.get('lineaId')?.disable();
+    this.certificacionForm.get('programaId')?.disable();
+    this.certificacionForm.get('operacionId')?.disable();
+  }
+  private resetProgramaOperacion(): void {
+    this.programasApi = []; this.operacionesApi = [];
+    this.certificacionForm.patchValue({ programaId: '', operacionId: '' });
+    this.certificacionForm.get('programaId')?.disable();
+    this.certificacionForm.get('operacionId')?.disable();
+  }
+  private resetOperacion(): void {
+    this.operacionesApi = [];
+    this.certificacionForm.patchValue({ operacionId: '' });
+    this.certificacionForm.get('operacionId')?.disable();
   }
 
-  abrirModal(porcentaje: number): void {
-    if (!this.empleadoActual()) {
-      alert('Debe seleccionar un empleado válido antes de certificar');
+  // -------- Helpers UI --------
+  hoyISO(): string { return new Date().toISOString().split('T')[0]; }
+  nombreDe(lista: Catalogo[], id: number, fallback: string): string {
+    const it = lista.find(x => x.id === Number(id));
+    return it?.nombre ?? it?.name ?? (id ? `#${id}` : fallback);
+  }
+  nombreArea()     { return this.nombreDe(this.areasApi,      this.certificacionForm.value.areaId,     'Área'); }
+  nombreLinea()    { return this.nombreDe(this.lineasApi,     this.certificacionForm.value.lineaId,    'Línea'); }
+  nombrePrograma() { return this.nombreDe(this.programasApi,  this.certificacionForm.value.programaId, 'Programa'); }
+  nombreOperacion(){ return this.nombreDe(this.operacionesApi,this.certificacionForm.value.operacionId,'Operación'); }
+
+  // -------- Modal / Competencias (igual que ya tenías) --------
+  abrirModal(p: number) {
+    if (!this.puedeIniciarCertificacion) {
+      alert('Complete No. empleado, área, línea, programa y operación.');
       return;
     }
-    this.modalAbierto.set(porcentaje);
-    // Inicializar competencias si no existen
-    const competencias = this.competenciasPorPorcentaje[porcentaje];
-    const competenciasActuales = this.competenciasSeleccionadas();
-    competencias.forEach(comp => {
-      if (!(comp.id in competenciasActuales)) {
-        this.competenciasSeleccionadas.set({
-          ...competenciasActuales,
-          [comp.id]: false
-        });
-      }
-    });
+    this.modalAbierto.set(p);
+    const comps = this.competenciasPorPorcentaje[p] ?? [];
+    const current = this.competenciasSeleccionadas();
+    const next = { ...current };
+    comps.forEach(c => { if (!(c.id in next)) next[c.id] = false; });
+    this.competenciasSeleccionadas.set(next);
+  }
+  cerrarModal() { this.modalAbierto.set(null); }
+  toggleCompetencia(id: string) {
+    const a = this.competenciasSeleccionadas();
+    this.competenciasSeleccionadas.set({ ...a, [id]: !a[id] });
+  }
+  verificarCompetenciasCompletas(p: number) {
+    const comps = this.competenciasPorPorcentaje[p] ?? [];
+    const sel = this.competenciasSeleccionadas();
+    return comps.every(c => sel[c.id]);
+  }
+  getCompetenciasCompletadas(p: number) {
+    const comps = this.competenciasPorPorcentaje[p] ?? [];
+    const sel = this.competenciasSeleccionadas();
+    return comps.filter(c => sel[c.id]).length;
+  }
+  getPorcentajeProgreso(p: number) {
+    const t = (this.competenciasPorPorcentaje[p] ?? []).length;
+    const c = this.getCompetenciasCompletadas(p);
+    return t ? (c / t) * 100 : 0;
   }
 
-  cerrarModal(): void {
-    this.modalAbierto.set(null);
-  }
-
-  toggleCompetencia(competenciaId: string): void {
-    const actual = this.competenciasSeleccionadas();
-    this.competenciasSeleccionadas.set({
-      ...actual,
-      [competenciaId]: !actual[competenciaId]
-    });
-  }
-
-  verificarCompetenciasCompletas(porcentaje: number): boolean {
-    const competencias = this.competenciasPorPorcentaje[porcentaje];
-    const seleccionadas = this.competenciasSeleccionadas();
-    return competencias.every(comp => seleccionadas[comp.id] === true);
-  }
-
-  async certificarEmpleado(porcentaje: number): Promise<void> {
+  // -------- Acción principal --------
+  certificarEmpleado(porcentaje: number) {
     if (!this.verificarCompetenciasCompletas(porcentaje)) {
-      alert('Debe completar todas las competencias antes de certificar');
+      alert('Debe completar todas las competencias.');
       return;
     }
-
+    const raw = this.certificacionForm.getRawValue();
+    const payload = {
+      number_employee: String(raw.numeroEmpleado),
+      operation_id: Number(raw.operacionId), // ← operación ya filtrada por programa
+      porcentaje,
+      fecha_certificacion: String(raw.fechaEvaluacion),
+      notas: (raw.notas ?? '').trim() || null
+    };
     this.cargandoGuardado.set(true);
-    
-    try {
-      // Simular llamada a API
-      await this.simularGuardadoCertificacion(porcentaje);
-      
-      alert(`Empleado certificado exitosamente al ${porcentaje}%`);
-      this.cerrarModal();
-      this.reiniciarFormulario();
-      
-    } catch (error) {
-      alert('Error al guardar la certificación. Intente nuevamente.');
-      console.error('Error:', error);
-    } finally {
-      this.cargandoGuardado.set(false);
-    }
-  }
-
-  private async simularGuardadoCertificacion(porcentaje: number): Promise<void> {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        const empleado = this.empleadoActual();
-        const formValues = this.certificacionForm.value;
-        if (empleado) {
-          const certificacion = {
-            numeroEmpleado: empleado.numero,
-            nombre: empleado.nombre,
-            linea: formValues.linea,
-            operacion: formValues.operacion,
-            programa: formValues.programa,
-            fechaEvaluacion: new Date(formValues.fechaEvaluacion),
-            porcentajeCertificacion: porcentaje,
-            fechaCreacion: new Date()
-          };
-          
-          // Aquí se enviaría al backend
-          console.log('Certificación guardada:', certificacion);
-        }
-        resolve();
-      }, 1500);
+    this.api.createCertification(payload).subscribe({
+      next: _ => { alert(`Empleado certificado al ${porcentaje}%`); this.cerrarModal(); },
+      error: e => alert(e?.error?.error || e?.error?.message || 'Error al guardar'),
+      complete: () => this.cargandoGuardado.set(false)
     });
   }
 
-  private reiniciarFormulario(): void {
-    this.certificacionForm.reset();
-    this.certificacionForm.patchValue({
-      fechaEvaluacion: this.obtenerFechaHoy()
-    });
-    this.empleadoActual.set(null);
-    this.competenciasSeleccionadas.set({});
-  }
-
-  // Getters para el template
+  // -------- Getters de estado --------
   get numeroEmpleadoValido(): boolean {
-    const control = this.certificacionForm.get('numeroEmpleado');
-    return !!(control && control.valid && control.value && this.empleadoActual());
+    const c = this.certificacionForm.get('numeroEmpleado');
+    return !!(c && c.valid && c.value);
   }
-
   get formularioCompleto(): boolean {
-    return this.numeroEmpleadoValido && 
-           !!this.certificacionForm.get('linea')?.value &&
-           !!this.certificacionForm.get('operacion')?.value &&
-           !!this.certificacionForm.get('programa')?.value;
+    return this.numeroEmpleadoValido &&
+           !!this.certificacionForm.value.areaId &&
+           !!this.certificacionForm.value.lineaId &&
+           !!this.certificacionForm.value.programaId &&
+           !!this.certificacionForm.value.operacionId;
   }
-
   get puedeIniciarCertificacion(): boolean {
     return this.formularioCompleto && !this.guardando();
   }
-
-  // Métodos para el template
-  onNumeroEmpleadoInput(event: any): void {
-    const valor = event.target.value.replace(/[^0-9]/g, '');
-    event.target.value = valor;
-    this.certificacionForm.patchValue({ numeroEmpleado: valor });
+  onNumeroEmpleadoInput(e: any) {
+    const v = String(e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4);
+    e.target.value = v;
+    this.certificacionForm.patchValue({ numeroEmpleado: v });
   }
 
-  getCompetenciasCompletadas(porcentaje: number): number {
-    const competencias = this.competenciasPorPorcentaje[porcentaje];
-    const seleccionadas = this.competenciasSeleccionadas();
-    return competencias.filter(comp => seleccionadas[comp.id] === true).length;
-  }
-
-  getPorcentajeProgreso(porcentaje: number): number {
-    const total = this.competenciasPorPorcentaje[porcentaje].length;
-    const completadas = this.getCompetenciasCompletadas(porcentaje);
-    return (completadas / total) * 100;
+  // -------- Utilidades de filtrado defensivo --------
+  private filterByIdOptions<T extends Record<string, any>>(list: T[], id: number, keys: string[]): T[] {
+    const idNum = Number(id);
+    // Si la API ya viene filtrada (lista corta y sin claves), devolver tal cual
+    if (!Array.isArray(list) || list.length === 0) return list;
+    const hasAnyKey = keys.some(k => list.some(item => item && (k in item)));
+    if (!hasAnyKey) return list;
+    return list.filter(item => keys.some(k => Number(item?.[k]) === idNum));
   }
 }

@@ -9,110 +9,108 @@
               <i class="bi bi-award-fill me-2"></i>
               CERTIFICACIÓN DE COSTURA PARA ACREDITAR NIVEL DE COMPETENCIA EN OPERACIÓN
             </h2>
-            <div class="company-logo">
-              <span class="logo-text">GLOBAL SOFT PARTNER</span>
-            </div>
+            <div class="company-logo"><span class="logo-text">GLOBAL SOFT PARTNER</span></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Formulario Principal -->
-    <form [formGroup]="certificacionForm" class="certification-form">
-      
-      <!-- Información del Empleado -->
+    <!-- Formulario -->
+    <form [formGroup]="certificacionForm" class="certification-form" novalidate>
       <div class="row mb-4">
         <div class="col-12">
           <div class="info-card">
             <div class="card-header">
-              <h5 class="mb-0">
-                <i class="bi bi-person-fill me-2"></i>
-                Información del Empleado
-              </h5>
+              <h5 class="mb-0"><i class="bi bi-person-fill me-2"></i>Información del Empleado</h5>
             </div>
+
             <div class="card-body">
+                <div class="row g-3 mt-2">
               <div class="row g-3">
                 <div class="col-md-3">
                   <label class="form-label required">No. Empleado</label>
-                  <input 
-                    type="text" 
-                    class="form-control"
-                    formControlName="numeroEmpleado"
-                    placeholder="Ej. 1234"
-                    maxlength="4"
-                    (input)="onNumeroEmpleadoInput($event)"
-                  >
-                  <div class="invalid-feedback" 
-                       [style.display]="certificacionForm.get('numeroEmpleado')?.invalid && certificacionForm.get('numeroEmpleado')?.touched ? 'block' : 'none'">
+                  <input type="text" class="form-control" formControlName="numeroEmpleado"
+                         placeholder="Ej. 1234" maxlength="4" (input)="onNumeroEmpleadoInput($event)">
+                  <div class="invalid-feedback d-block"
+                       *ngIf="certificacionForm.get('numeroEmpleado')?.invalid && certificacionForm.get('numeroEmpleado')?.touched">
                     Ingrese un número de empleado válido (4 dígitos)
                   </div>
                 </div>
-                
                 <div class="col-md-9">
                   <label class="form-label">Nombre</label>
-                  <input 
-                    type="text" 
-                    class="form-control auto-filled"
-                    formControlName="nombre"
-                    readonly
-                    placeholder="El nombre se llenará automáticamente"
-                  >
+                  <input type="text" class="form-control auto-filled" formControlName="nombre"
+                         placeholder="El nombre se llenará automáticamente" readonly>
                 </div>
               </div>
+  <div class="row g-3 mt-2">
+    <!-- Área -->
+    <div class="col-md-3">
+      <label class="form-label required">Área</label>
+      <select class="form-select" formControlName="areaId">
+        <option value="">Seleccionar área</option>
+        @for (ar of areasApi; track ar.id) {
+          <option [value]="ar.id">{{ ar.nombre ?? ar.name ?? ('#' + ar.id) }}</option>
+        }
+      </select>
+      <div class="invalid-feedback d-block"
+           *ngIf="certificacionForm.get('areaId')?.invalid && certificacionForm.get('areaId')?.touched">
+        Debe seleccionar un área
+      </div>
+    </div>
 
-              <div class="row g-3 mt-2">
-                <div class="col-md-4">
-                  <label class="form-label required">Operación</label>
-                  <select class="form-select" formControlName="operacion">
-                    <option value="">Seleccionar operación</option>
-                    @for (operacion of operacionesDisponibles; track operacion) {
-                      <option [value]="operacion">{{ operacion }}</option>
-                    }
-                  </select>
-                  <div class="invalid-feedback" 
-                       [style.display]="certificacionForm.get('operacion')?.invalid && certificacionForm.get('operacion')?.touched ? 'block' : 'none'">
-                    Debe seleccionar una operación
-                  </div>
-                </div>
-                
-                <div class="col-md-4">
-                  <label class="form-label required">Línea</label>
-                  <select class="form-select" formControlName="linea">
-                    <option value="">Seleccionar línea</option>
-                    @for (linea of lineasDisponibles; track linea) {
-                      <option [value]="linea">{{ linea }}</option>
-                    }
-                  </select>
-                  <div class="invalid-feedback" 
-                       [style.display]="certificacionForm.get('linea')?.invalid && certificacionForm.get('linea')?.touched ? 'block' : 'none'">
-                    Debe seleccionar una línea
-                  </div>
-                </div>
-                
-                <div class="col-md-4">
-                  <label class="form-label required">Programa</label>
-                  <select class="form-select" formControlName="programa">
-                    <option value="">Seleccionar programa</option>
-                    @for (programa of programasDisponibles; track programa) {
-                      <option [value]="programa">{{ programa }}</option>
-                    }
-                  </select>
-                  <div class="invalid-feedback" 
-                       [style.display]="certificacionForm.get('programa')?.invalid && certificacionForm.get('programa')?.touched ? 'block' : 'none'">
-                    Debe seleccionar un programa
-                  </div>
-                </div>
-              </div>
+    <!-- Línea (depende de área) -->
+    <div class="col-md-3">
+      <label class="form-label required">Línea</label>
+      <select class="form-select" formControlName="lineaId">
+        <option value="">Seleccionar línea</option>
+        @for (ln of lineasApi; track ln.id) {
+          <option [value]="ln.id">{{ ln.nombre ?? ln.name ?? ('#' + ln.id) }}</option>
+        }
+      </select>
+      <div class="invalid-feedback d-block"
+           *ngIf="certificacionForm.get('lineaId')?.invalid && certificacionForm.get('lineaId')?.touched">
+        Debe seleccionar una línea
+      </div>
+    </div>
 
+    <!-- Programa (depende de línea) -->
+    <div class="col-md-3">
+      <label class="form-label required">Programa</label>
+      <select class="form-select" formControlName="programaId">
+        <option value="">Seleccionar programa</option>
+        @for (pr of programasApi; track pr.id) {
+          <option [value]="pr.id">{{ pr.nombre ?? pr.name ?? ('#' + pr.id) }}</option>
+        }
+      </select>
+      <div class="invalid-feedback d-block"
+           *ngIf="certificacionForm.get('programaId')?.invalid && certificacionForm.get('programaId')?.touched">
+        Debe seleccionar un programa
+      </div>
+    </div>
+
+    <!-- Operación (depende de programa) -->
+    <div class="col-md-3">
+      <label class="form-label required">Operación</label>
+      <select class="form-select" formControlName="operacionId">
+        <option value="">Seleccionar operación</option>
+        @for (op of operacionesApi; track op.id) {
+          <option [value]="op.id">{{ op.nombre ?? op.name ?? ('#' + op.id) }}</option>
+        }
+      </select>
+      <div class="invalid-feedback d-block"
+           *ngIf="certificacionForm.get('operacionId')?.invalid && certificacionForm.get('operacionId')?.touched">
+        Debe seleccionar una operación
+      </div>
+    </div>
+  </div>
               <div class="row g-3 mt-2">
                 <div class="col-md-4">
                   <label class="form-label">Fecha de Evaluación</label>
-                  <input 
-                    type="date" 
-                    class="form-control auto-filled"
-                    formControlName="fechaEvaluacion"
-                    readonly
-                  >
+                  <input type="date" class="form-control auto-filled" formControlName="fechaEvaluacion" readonly>
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label">Notas (opcional)</label>
+                  <input type="text" class="form-control" formControlName="notas" placeholder="Notas">
                 </div>
               </div>
             </div>
@@ -120,124 +118,100 @@
         </div>
       </div>
 
-      <!-- Botones de Certificación -->
+      <!-- Sección niveles -->
       <div class="row mb-4">
         <div class="col-12">
           <div class="certification-card">
             <div class="card-header">
-              <h5 class="mb-0">
-                <i class="bi bi-clipboard-check me-2"></i>
-                Seleccionar Nivel de Certificación
-              </h5>
+              <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Seleccionar Nivel de Certificación</h5>
             </div>
             <div class="card-body">
               @if (!numeroEmpleadoValido) {
                 <div class="alert alert-info mb-3">
                   <i class="bi bi-info-circle me-2"></i>
-                  Primero debe ingresar un número de empleado válido para habilitar la certificación.
+                  Primero ingrese un número de empleado válido.
                 </div>
               }
               @if (numeroEmpleadoValido && !formularioCompleto) {
                 <div class="alert alert-warning mb-3">
                   <i class="bi bi-exclamation-triangle me-2"></i>
-                  Complete todos los campos requeridos (operación, línea y programa) para habilitar la certificación.
+                  Complete operación, línea y programa para habilitar la certificación.
                 </div>
               }
+
               <div class="row g-3 justify-content-center">
                 <div class="col-sm-6 col-md-6 col-lg-3">
-                  <button 
-                    type="button" 
-                    class="cert-button cert-25"
-                    [class.disabled]="!puedeIniciarCertificacion"
-                    (click)="abrirModal(25)"
-                    [disabled]="!puedeIniciarCertificacion || guardando()"
-                  >
+                  <button type="button" class="cert-button cert-25"
+                          [class.disabled]="!puedeIniciarCertificacion"
+                          [disabled]="!puedeIniciarCertificacion || guardando()"
+                          (click)="abrirModal(25)">
                     <div class="cert-percentage">25%</div>
                     <div class="cert-label">Nivel Básico</div>
                     <i class="bi bi-chevron-right"></i>
                   </button>
                 </div>
-                
                 <div class="col-sm-6 col-md-6 col-lg-3">
-                  <button 
-                    type="button" 
-                    class="cert-button cert-50"
-                    [class.disabled]="!puedeIniciarCertificacion"
-                    (click)="abrirModal(50)"
-                    [disabled]="!puedeIniciarCertificacion || guardando()"
-                  >
+                  <button type="button" class="cert-button cert-50"
+                          [class.disabled]="!puedeIniciarCertificacion"
+                          [disabled]="!puedeIniciarCertificacion || guardando()"
+                          (click)="abrirModal(50)">
                     <div class="cert-percentage">50%</div>
                     <div class="cert-label">Nivel Intermedio</div>
                     <i class="bi bi-chevron-right"></i>
                   </button>
                 </div>
-                
                 <div class="col-sm-6 col-md-6 col-lg-3">
-                  <button 
-                    type="button" 
-                    class="cert-button cert-75"
-                    [class.disabled]="!puedeIniciarCertificacion"
-                    (click)="abrirModal(75)"
-                    [disabled]="!puedeIniciarCertificacion || guardando()"
-                  >
+                  <button type="button" class="cert-button cert-75"
+                          [class.disabled]="!puedeIniciarCertificacion"
+                          [disabled]="!puedeIniciarCertificacion || guardando()"
+                          (click)="abrirModal(75)">
                     <div class="cert-percentage">75%</div>
                     <div class="cert-label">Nivel Avanzado</div>
                     <i class="bi bi-chevron-right"></i>
                   </button>
                 </div>
-                
                 <div class="col-sm-6 col-md-6 col-lg-3">
-                  <button 
-                    type="button" 
-                    class="cert-button cert-100"
-                    [class.disabled]="!puedeIniciarCertificacion"
-                    (click)="abrirModal(100)"
-                    [disabled]="!puedeIniciarCertificacion || guardando()"
-                  >
+                  <button type="button" class="cert-button cert-100"
+                          [class.disabled]="!puedeIniciarCertificacion"
+                          [disabled]="!puedeIniciarCertificacion || guardando()"
+                          (click)="abrirModal(100)">
                     <div class="cert-percentage">100%</div>
                     <div class="cert-label">Entrenamiento</div>
                     <i class="bi bi-chevron-right"></i>
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
       </div>
-
-    </form>
   </div>
+      </form>
+
 </div>
 
-<!-- Modal de Competencias -->
-<div class="modal-overlay" 
-     [class.active]="modalActivo() !== null"
-     (click)="cerrarModal()">
-  
+<!-- Modal -->
+<div class="modal-overlay" [class.active]="modalActivo() !== null" (click)="cerrarModal()">
   @if (modalActivo() !== null) {
-    <div class="modal-container" 
-         (click)="$event.stopPropagation()">
-      
+    <div class="modal-container" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h4>
-          <i class="bi bi-list-check me-2"></i>
-          Competencias - Certificación {{ modalActivo() }}%
-        </h4>
-        <button type="button" class="btn-close" (click)="cerrarModal()">
-          <i class="bi bi-x-lg"></i>
-        </button>
+        <h4><i class="bi bi-list-check me-2"></i>Competencias – Certificación {{ modalActivo() }}%</h4>
+        <button type="button" class="btn-close" (click)="cerrarModal()"><i class="bi bi-x-lg"></i></button>
       </div>
-      
+
       <div class="modal-body">
         @if (datosEmpleado()) {
           <div class="employee-info mb-3">
-            <strong>{{ datosEmpleado()?.nombre }}</strong> - {{ datosEmpleado()?.numero }}
-            <br>
-            <small class="text-muted">
-              {{ certificacionForm.get('operacion')?.value }} | 
-              {{ certificacionForm.get('linea')?.value }} | 
-              {{ certificacionForm.get('programa')?.value }}
-            </small>
+            <strong>{{ datosEmpleado()?.nombre || 'Empleado' }}</strong> – {{ datosEmpleado()?.numero }}<br>
+
+<!-- En el modal (cabeceras) puedes mostrar: -->
+<small class="text-muted">
+  {{ nombreArea() }} |
+  {{ nombreLinea() }} |
+  {{ nombrePrograma() }} |
+  {{ nombreOperacion() }}
+</small>
           </div>
         }
 
@@ -245,11 +219,9 @@
           @for (competencia of competenciasPorPorcentaje[modalActivo()!]; track competencia.id) {
             <div class="competencia-item">
               <label class="competencia-checkbox">
-                <input 
-                  type="checkbox" 
-                  [checked]="competenciasSeleccionadas()[competencia.id] || false"
-                  (change)="toggleCompetencia(competencia.id)"
-                >
+                <input type="checkbox"
+                       [checked]="competenciasSeleccionadas()[competencia.id] || false"
+                       (change)="toggleCompetencia(competencia.id)">
                 <span class="checkmark"></span>
                 <span class="competencia-text">{{ competencia.descripcion }}</span>
               </label>
@@ -257,41 +229,29 @@
           }
         </div>
       </div>
-      
+
       <div class="modal-footer">
         <div class="progress-info">
           <span class="progress-text">
-            Competencias completadas: 
-            {{ getCompetenciasCompletadas(modalActivo()!) }} 
-            de {{ competenciasPorPorcentaje[modalActivo()!].length }}
+            Competencias completadas: {{ getCompetenciasCompletadas(modalActivo()!) }}
+            de {{ competenciasPorPorcentaje[modalActivo()!]?.length || 0 }}
           </span>
           <div class="progress-bar-container">
-            <div class="progress-bar" 
-                 [style.width.%]="getPorcentajeProgreso(modalActivo()!)">
-            </div>
+            <div class="progress-bar" [style.width.%]="getPorcentajeProgreso(modalActivo()!)"></div>
           </div>
         </div>
-        
+
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
-            Cancelar
-          </button>
-          <button 
-            type="button" 
-            class="btn btn-success"
-            [disabled]="!verificarCompetenciasCompletas(modalActivo()!) || guardando()"
-            (click)="certificarEmpleado(modalActivo()!)"
-          >
-            @if (guardando()) {
-              <span class="spinner-border spinner-border-sm me-2"></span>
-            } @else {
-              <i class="bi bi-check-circle me-2"></i>
-            }
+          <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cancelar</button>
+          <button type="button" class="btn btn-success"
+                  [disabled]="!verificarCompetenciasCompletas(modalActivo()!) || guardando()"
+                  (click)="certificarEmpleado(modalActivo()!)">
+            @if (guardando()) { <span class="spinner-border spinner-border-sm me-2"></span> }
+            @else { <i class="bi bi-check-circle me-2"></i> }
             {{ guardando() ? 'Certificando...' : 'Certificar Empleado' }}
           </button>
         </div>
       </div>
-      
     </div>
   }
 </div>
