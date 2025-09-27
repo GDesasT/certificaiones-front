@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CertificacionesService } from '../../services/certificaciones.service';
@@ -19,10 +19,11 @@ interface MatrizData {
   templateUrl: './matriz.html',
   styleUrl: './matriz.css'
 })
-export class Matriz {
-  // Signals
-  lineaSeleccionada = signal<string>('todas');
-  registros = signal<Array<{
+export class Matriz implements OnInit {
+  private readonly svc = inject(CertificacionesService);
+  
+  // Cache para optimizar el rendimiento
+  private registrosCache = signal<Array<{
     empleadoNumero: string;
     empleadoNombre: string;
     empleadoFechaIngreso: string;
@@ -31,75 +32,11 @@ export class Matriz {
     operacion: string;
     porcentaje: number;
   }>>([]);
-  
-  // Datos computados
-  lineasDisponibles = computed(() => {
-    const lineas = [...new Set(this.registros().map(r => r.linea))];
-    return lineas.sort();
-  });
+  private cacheTimestamp = signal<number>(0);
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
-  operacionesPorLinea = computed(() => {
-    const linea = this.lineaSeleccionada();
-    const fuente = this.registros();
-    if (linea === 'todas') {
-      return [...new Set(fuente.map(cert => cert.operacion))].sort();
-    }
-    return [...new Set(
-      fuente
-        .filter(cert => cert.linea === linea)
-        .map(cert => cert.operacion)
-    )].sort();
-  });
-
-  matrizData = computed(() => {
-    const certificaciones = this.registros();
-    const linea = this.lineaSeleccionada();
-    
-    // Filtrar certificaciones por línea si es necesario
-    const certsFiltradas = linea === 'todas'
-      ? certificaciones
-      : certificaciones.filter(cert => cert.linea === linea);
-
-    // Agrupar por empleado
-    const empleadosMap = new Map();
-    certsFiltradas.forEach(cert => {
-      const key = cert.empleadoNumero;
-      if (!empleadosMap.has(key)) {
-        empleadosMap.set(key, {
-          empleado: {
-            numero: cert.empleadoNumero,
-            nombre: cert.empleadoNombre,
-            fechaIngreso: cert.empleadoFechaIngreso,
-            fechaCertificacion: cert.empleadoFechaCertificacion
-          },
-          certificaciones: {}
-        });
-      }
-      const empleado = empleadosMap.get(key);
-      empleado.certificaciones[cert.operacion] = cert.porcentaje;
-    });
-
-    // Convertir el mapa en array y asegurar que todos tengan todas las operaciones
-    const resultados = Array.from(empleadosMap.values());
-    const operaciones = this.operacionesPorLinea();
-    
-    resultados.forEach(emp => {
-      const certificacionesPorOperacion: any = {};
-      operaciones.forEach(op => {
-        certificacionesPorOperacion[op] = emp.certificaciones[op] || 0;
-      });
-      emp.certificaciones = certificacionesPorOperacion;
-    });
-
-    return resultados;
-  });
-
-  // Métodos
-  filtrarPorLinea(linea: string): void {
-    this.lineaSeleccionada.set(linea);
-  }
-
-  obtenerClasePorcentaje(porcentaje: number): string {
+  // Utilidades puras para mejor rendimiento y reutilización
+  private static readonly obtenerClasePorcentaje = (porcentaje: number): string => {
     if (porcentaje === 0) return 'cert-none';
     if (porcentaje === 25) return 'cert-25';
     if (porcentaje === 50) return 'cert-50';  
@@ -107,9 +44,9 @@ export class Matriz {
     if (porcentaje === 90) return 'cert-90';
     if (porcentaje === 100) return 'cert-100';
     return 'cert-none';
-  }
+  };
 
-  formatearFecha(fecha: string): string {
+  private static readonly formatearFecha = (fecha: string): string => {
     if (!fecha) return '';
     try {
       const fechaObj = new Date(fecha);
@@ -121,6 +58,133 @@ export class Matriz {
     } catch {
       return fecha; // Si hay error, devolver la fecha original
     }
+  };
+
+  private static readonly formatearOperacion = (operacion: string): { codigo: string; nombre: string } => {
+    const partes = operacion.split(' - ');
+    return {
+      codigo: partes[0],
+      nombre: partes[1] || partes[0]
+    };
+  };
+
+  private static readonly composeLabel = (objOrStr: any, codeKeys: string[], nameKeys: string[], fallbackPrefix?: string): string => {
+    if (!objOrStr) return '';
+    if (typeof objOrStr === 'string') return objOrStr;
+    const code = codeKeys.map(k => objOrStr?.[k]).find(v => !!v);
+    const name = nameKeys.map(k => objOrStr?.[k]).find(v => !!v);
+    if (code && name) return `${code} - ${name}`;
+    if (name && fallbackPrefix) return `${fallbackPrefix} - ${name}`;
+    if (name) return String(name);
+    if (code) return String(code);
+    return '';
+  };
+  // Signals
+  lineaSeleccionada = signal<string>('todas');
+  
+  // Registros con cache inteligente
+  registros = computed(() => {
+    const cache = this.registrosCache();
+    const timestamp = this.cacheTimestamp();
+    const now = Date.now();
+    
+    if (cache.length > 0 && (now - timestamp) < this.CACHE_DURATION) {
+      return cache;
+    }
+    return cache; // Devolver cache aunque esté expirado, la recarga es asyncrona
+  });
+  
+  // Datos computados optimizados para evitar recálculos innecesarios
+  lineasDisponibles = computed(() => {
+    const registros = this.registros();
+    if (registros.length === 0) return [];
+    
+    const lineasSet = new Set<string>();
+    registros.forEach(r => lineasSet.add(r.linea));
+    return Array.from(lineasSet).sort();
+  });
+
+  operacionesPorLinea = computed(() => {
+    const linea = this.lineaSeleccionada();
+    const registros = this.registros();
+    
+    if (registros.length === 0) return [];
+    
+    const operacionesSet = new Set<string>();
+    if (linea === 'todas') {
+      registros.forEach(cert => operacionesSet.add(cert.operacion));
+    } else {
+      registros
+        .filter(cert => cert.linea === linea)
+        .forEach(cert => operacionesSet.add(cert.operacion));
+    }
+    
+    return Array.from(operacionesSet).sort();
+  });
+
+  matrizData = computed(() => {
+    const linea = this.lineaSeleccionada();
+    const registros = this.registros();
+    const operaciones = this.operacionesPorLinea();
+    
+    if (registros.length === 0) return [];
+    
+    // Filtrar y agrupar en una sola pasada para mejor rendimiento
+    const empleadosMap = new Map<string, MatrizData>();
+    
+    const registrosFiltrados = linea === 'todas' ? registros : registros.filter(r => r.linea === linea);
+    
+    // Procesar registros en una sola iteración
+    registrosFiltrados.forEach(cert => {
+      const empleadoKey = cert.empleadoNumero;
+      let empleado = empleadosMap.get(empleadoKey);
+      
+      if (!empleado) {
+        empleado = {
+          empleado: {
+            numero: cert.empleadoNumero,
+            nombre: cert.empleadoNombre,
+            fechaIngreso: cert.empleadoFechaIngreso,
+            fechaCertificacion: cert.empleadoFechaCertificacion
+          },
+          certificaciones: {}
+        };
+        empleadosMap.set(empleadoKey, empleado);
+      }
+      
+      empleado.certificaciones[cert.operacion] = cert.porcentaje;
+    });
+
+    // Normalizar certificaciones para incluir todas las operaciones
+    const resultados = Array.from(empleadosMap.values());
+    resultados.forEach(emp => {
+      const certificacionesNormalizadas: { [operacion: string]: number } = {};
+      operaciones.forEach(op => {
+        certificacionesNormalizadas[op] = emp.certificaciones[op] || 0;
+      });
+      emp.certificaciones = certificacionesNormalizadas;
+    });
+
+    return resultados;
+  });
+
+  // Estado computado para el UI
+  datosVacios = computed(() => this.registros().length === 0);
+  tieneFiltroLinea = computed(() => this.lineaSeleccionada() !== 'todas');
+
+  // Métodos públicos para template (delegando a funciones puras)
+  obtenerClasePorcentaje = Matriz.obtenerClasePorcentaje;
+  formatearFecha = Matriz.formatearFecha;  
+  formatearOperacion = Matriz.formatearOperacion;
+
+  filtrarPorLinea(linea: string): void {
+    this.lineaSeleccionada.set(linea);
+  }
+
+  // Método para forzar recarga de datos
+  recargarDatos(): void {
+    this.cacheTimestamp.set(0); // Invalidar cache
+    this.cargarDatos();
   }
 
   exportarPDF(): void {
@@ -128,19 +192,18 @@ export class Matriz {
     alert('Función de exportación a PDF - Por implementar');
   }
 
-  formatearOperacion(operacion: string): { codigo: string; nombre: string } {
-    const partes = operacion.split(' - ');
-    return {
-      codigo: partes[0],
-      nombre: partes[1] || partes[0]
-    };
-  }
-
-  constructor(private svc: CertificacionesService) {
+  ngOnInit(): void {
     this.cargarDatos();
   }
 
   private cargarDatos() {
+    // Verificar cache antes de hacer la petición
+    const now = Date.now();
+    const timestamp = this.cacheTimestamp();
+    if (this.registrosCache().length > 0 && (now - timestamp) < this.CACHE_DURATION) {
+      return; // Cache válido, no recargar
+    }
+
     // Usar la API real
     this.svc.getCertifiersWithUsers().subscribe({
       next: (rows: any[]) => {
@@ -148,10 +211,13 @@ export class Matriz {
           .filter(r => !!r)
           .map(r => this.mapRow(r))
           .filter(r => !!r.empleadoNumero && !!r.operacion && !!r.linea);
-        this.registros.set(mapeados);
+        
+        this.registrosCache.set(mapeados);
+        this.cacheTimestamp.set(Date.now());
       },
       error: (_err) => {
-        this.registros.set([]);
+        this.registrosCache.set([]);
+        this.cacheTimestamp.set(Date.now());
       }
     });
   }
@@ -164,7 +230,7 @@ export class Matriz {
 
     // Línea: objeto o string
     const lineaObj = r?.line || r?.linea || r?.operation?.line || r?.operacion?.linea;
-    const linea = this.composeLabel(
+    const linea = Matriz.composeLabel(
       lineaObj,
       ['number_line', 'code', 'numero', 'clave', 'number'],
       ['name', 'nombre'],
@@ -173,7 +239,7 @@ export class Matriz {
 
     // Operación: objeto o string
     const opObj = r?.operation || r?.operacion;
-    const operacion = this.composeLabel(
+    const operacion = Matriz.composeLabel(
       opObj,
       ['number_operation', 'code', 'numero', 'clave', 'number'],
       ['name', 'nombre'],
@@ -185,17 +251,5 @@ export class Matriz {
     ) || 0;
 
     return { empleadoNumero, empleadoNombre, empleadoFechaIngreso, empleadoFechaCertificacion, linea, operacion, porcentaje };
-  }
-
-  private composeLabel(objOrStr: any, codeKeys: string[], nameKeys: string[], fallbackPrefix?: string): string {
-    if (!objOrStr) return '';
-    if (typeof objOrStr === 'string') return objOrStr;
-    const code = codeKeys.map(k => objOrStr?.[k]).find(v => !!v);
-    const name = nameKeys.map(k => objOrStr?.[k]).find(v => !!v);
-    if (code && name) return `${code} - ${name}`;
-    if (name && fallbackPrefix) return `${fallbackPrefix} - ${name}`;
-    if (name) return String(name);
-    if (code) return String(code);
-    return '';
   }
 }

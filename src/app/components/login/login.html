@@ -1,0 +1,108 @@
+<!--=================[Wrapper Principal]=========-->
+<div class="login-wrapper">
+  <div class="rainbow-background"></div>
+  <div class="overlay"></div>
+  
+  <!--=================[Contenido del Login]=========-->
+  <div class="login-container">
+    <div class="login-card">
+      <!--=================[Logo y Header]=========-->
+      <div class="login-header">
+        <div class="logo-container">
+          <img src="certisafe-logo.png" alt="CertiSafe Logo" class="logo-img">
+        </div>
+        <h1 class="login-title">CERTISAFE</h1>
+        <p class="login-subtitle">Global Safety Textiles</p>
+      </div>
+
+      <!--=================[Formulario de Login]=========-->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+        <!--=================[Campo Usuario]=========-->
+        <div class="form-group">
+          <label for="username" class="form-label">
+            <i class="bi bi-person-fill me-2"></i>
+            Usuario
+          </label>
+          <input
+            type="text"
+            id="username"
+            formControlName="username"
+            class="form-control"
+            [class.is-invalid]="isFieldInvalid('username')"
+            placeholder="Ingresa tu usuario"
+            autocomplete="username"
+          >
+          @if (isFieldInvalid('username')) {
+            <div class="invalid-feedback">
+              {{ getFieldError('username') }}
+            </div>
+          }
+        </div>
+
+        <!--=================[Campo Contraseña]=========-->
+        <div class="form-group">
+          <label for="password" class="form-label">
+            <i class="bi bi-lock-fill me-2"></i>
+            Contraseña
+          </label>
+          <div class="password-input-container">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              id="password"
+              formControlName="password"
+              class="form-control"
+              [class.is-invalid]="isFieldInvalid('password')"
+              placeholder="Ingresa tu contraseña"
+              autocomplete="current-password"
+            >
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            >
+              <i [class]="showPassword() ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+            </button>
+          </div>
+          @if (isFieldInvalid('password')) {
+            <div class="invalid-feedback">
+              {{ getFieldError('password') }}
+            </div>
+          }
+        </div>
+
+        <!--=================[Botón de Submit]=========-->
+        <button
+          type="submit"
+          class="btn btn-login"
+          [disabled]="isLoading()"
+        >
+          @if (isLoading()) {
+            <div class="spinner-border spinner-border-sm me-2" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            Iniciando sesión...
+          } @else {
+            <i class="bi bi-box-arrow-in-right me-2"></i>
+            Iniciar Sesión
+          }
+        </button>
+
+        <!--=================[Mensaje de Error]=========-->
+        @if (errorMessage()) {
+          <div class="alert alert-danger mt-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {{ errorMessage() }}
+          </div>
+        }
+      </form>
+
+      <!-- Footer -->
+      <div class="login-footer">
+        <small class="text-muted">
+          Sistema de Gestión de Certificaciones v1.0
+        </small>
+      </div>
+    </div>
+  </div>
+</div>

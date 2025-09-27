@@ -17,6 +17,7 @@ interface Catalogo { id: number; nombre?: string; name?: string; }
   styleUrls: ['./certificar.css']
 })
 export class Certificar implements OnInit {
+  // Estado consolidado - eliminando aliases innecesarios
   private readonly empleadoActual = signal<{ numero: string; nombre: string | null } | null>(null);
   private readonly modalAbierto = signal<number | null>(null);
   private readonly cargandoGuardado = signal(false);
@@ -25,11 +26,27 @@ export class Certificar implements OnInit {
   private readonly usuariosCache = signal<Array<{ employee_number: string; name: string }>>([]);
   readonly competenciasSeleccionadas = signal<{ [id: string]: boolean }>({});
 
-  readonly datosEmpleado = computed(() => this.empleadoActual());
-  readonly modalActivo = computed(() => this.modalAbierto());
-  readonly guardando = computed(() => this.cargandoGuardado());
-  readonly buscando = computed(() => this.buscandoEmpleado());
-  readonly cacheReady = computed(() => !this.cargandoCache());
+  // Computed properties útiles (no redundantes)
+  readonly empleadoValido = computed(() => {
+    const emp = this.empleadoActual();
+    return emp && emp.nombre && emp.nombre !== 'No encontrado';
+  });
+
+  readonly puedeGuardar = computed(() => 
+    this.empleadoValido() && !this.cargandoGuardado() && this.certificacionForm?.valid
+  );
+
+  // Estados de UI para template  
+  readonly cacheReady = computed(() => this.areasApi.length > 0);
+  readonly buscando = signal(false);
+  readonly guardando = this.cargandoGuardado; // Alias para compatibilidad
+  readonly modalActivo = signal<number | null>(null);
+  readonly datosEmpleado = computed(() => {
+    const numero = this.certificacionForm?.get('numeroEmpleado')?.value;
+    const nombre = this.certificacionForm?.get('nombre')?.value;
+    if (!numero) return null;
+    return { numero, nombre: nombre || 'Empleado' };
+  });
 
   certificacionForm!: FormGroup;
 
@@ -75,70 +92,80 @@ export class Certificar implements OnInit {
       notas: ['']
     });
 
-  // Nombre automático INSTANTÁNEO con cache local
+  // Nombre automático optimizado con cache local
     this.certificacionForm.get('numeroEmpleado')?.valueChanges.pipe(
-      debounceTime(100), // Reducido a 100ms solo para evitar demasiadas actualizaciones
+      debounceTime(100),
       distinctUntilChanged()
     ).subscribe((num: string) => {
-      if (!num || num.length !== 4) { 
-        this.resetEmpleado(); 
-        return; 
-      }
-      
-      // BÚSQUEDA INSTANTÁNEA en cache local
-      const usuarioLocal = this.buscarUsuarioLocal(num);
-      
-      if (usuarioLocal) {
-        // ✅ ENCONTRADO EN CACHE - INSTANTÁNEO
-        const nombre = usuarioLocal.name;
-        this.empleadoActual.set({ numero: num, nombre });
-        this.certificacionForm.patchValue({ nombre });
-        this.cargarHistorialEmpleado(num);
-        return;
-      }
-      
-      // Si no está en cache, intentar búsqueda en backend como fallback
-      const cacheVacia = this.usuariosCache().length === 0;
-      
-      if (cacheVacia) {
-        // Cache aún no se ha cargado, usar método original
-        this.buscandoEmpleado.set(true);
-        this.certificacionForm.patchValue({ nombre: 'Buscando...' });
-        
-        this.api.findUserByNumber(num).subscribe({
-          next: user => {
-            const nombre = user?.name ?? null;
-            this.empleadoActual.set({ numero: num, nombre });
-            this.certificacionForm.patchValue({ nombre: nombre ?? 'No encontrado' });
-            this.buscandoEmpleado.set(false);
-
-            if (nombre) {
-              this.cargarHistorialEmpleado(num);
-            }
-          },
-          error: err => {
-            console.error('Error buscando empleado:', err);
-            this.empleadoActual.set({ numero: num, nombre: null });
-            this.buscandoEmpleado.set(false);
-            
-            let errorMsg = 'Error al buscar';
-            if (err.message && err.message.includes('demasiado tiempo')) {
-              errorMsg = 'Búsqueda lenta';
-            } else if (err.status === 404) {
-              errorMsg = 'No encontrado';
-            } else if (err.status === 500) {
-              errorMsg = 'Error servidor';
-            }
-            
-            this.certificacionForm.patchValue({ nombre: errorMsg });
-          }
-        });
-      } else {
-        // Cache cargada pero usuario no encontrado
-        this.empleadoActual.set({ numero: num, nombre: null });
-        this.certificacionForm.patchValue({ nombre: 'No encontrado' });
-      }
+      this.buscarEmpleado(num);
     });
+  }
+
+  private buscarEmpleado(num: string): void {
+    if (!num || num.length !== 4) { 
+      this.resetEmpleado(); 
+      return; 
+    }
+    
+    // Búsqueda instantánea en cache local
+    const usuarioLocal = this.buscarUsuarioLocal(num);
+    
+    if (usuarioLocal) {
+      this.setEmpleadoEncontrado(num, usuarioLocal.name);
+      return;
+    }
+    
+    // Fallback a backend si no está en cache
+    this.buscarEmpleadoEnBackend(num);
+  }
+
+  private setEmpleadoEncontrado(numero: string, nombre: string): void {
+    this.empleadoActual.set({ numero, nombre });
+    this.certificacionForm.patchValue({ nombre });
+    this.cargarHistorialEmpleado(numero);
+  }
+
+  private buscarEmpleadoEnBackend(num: string): void {
+    const cacheVacia = this.usuariosCache().length === 0;
+    
+    if (cacheVacia) {
+      // Cache aún no se ha cargado, usar método original
+      this.buscandoEmpleado.set(true);
+      this.certificacionForm.patchValue({ nombre: 'Buscando...' });
+      
+      this.api.findUserByNumber(num).subscribe({
+        next: user => {
+          const nombre = user?.name ?? null;
+          this.empleadoActual.set({ numero: num, nombre });
+          this.certificacionForm.patchValue({ nombre: nombre ?? 'No encontrado' });
+          this.buscandoEmpleado.set(false);
+
+          if (nombre) {
+            this.cargarHistorialEmpleado(num);
+          }
+        },
+        error: err => {
+          console.error('Error buscando empleado:', err);
+          this.empleadoActual.set({ numero: num, nombre: null });
+          this.buscandoEmpleado.set(false);
+          
+          let errorMsg = 'Error al buscar';
+          if (err.message && err.message.includes('demasiado tiempo')) {
+            errorMsg = 'Búsqueda lenta';
+          } else if (err.status === 404) {
+            errorMsg = 'No encontrado';
+          } else if (err.status === 500) {
+            errorMsg = 'Error servidor';
+          }
+          
+          this.certificacionForm.patchValue({ nombre: errorMsg });
+        }
+      });
+    } else {
+      // Cache cargada pero usuario no encontrado
+      this.empleadoActual.set({ numero: num, nombre: null });
+      this.certificacionForm.patchValue({ nombre: 'No encontrado' });
+    }
   }
 
   // -------- Cascada: listeners --------
@@ -151,7 +178,7 @@ export class Certificar implements OnInit {
       this.api.getLinesByArea(Number(areaId)).subscribe({
         next: lines => {
           const lista = (lines ?? []);
-          this.lineasApi = this.filterByIdOptions(lista, Number(areaId), ['area_id','areaId','id_area','idArea']);
+          this.lineasApi = this.filterByIdOptions(lista as Record<string, any>[], Number(areaId), ['area_id','areaId','id_area','idArea']) as Catalogo[];
           this.certificacionForm.get('lineaId')?.enable();
         },
         error: _ => { this.lineasApi = []; }
@@ -166,7 +193,7 @@ export class Certificar implements OnInit {
       this.api.getProgramsByLine(Number(lineId)).subscribe({
         next: programs => {
           const lista = (programs ?? []);
-          this.programasApi = this.filterByIdOptions(lista, Number(lineId), ['line_id','lineId','linea_id','id_line','idLinea']);
+          this.programasApi = this.filterByIdOptions(lista as Record<string, any>[], Number(lineId), ['line_id','lineId','linea_id','id_line','idLinea']) as Catalogo[];
           this.certificacionForm.get('programaId')?.enable();
         },
         error: _ => { this.programasApi = []; }
@@ -181,7 +208,7 @@ export class Certificar implements OnInit {
       this.api.getOperationsByProgram(Number(programId)).subscribe({
         next: ops => {
           const lista = (ops ?? []);
-          this.operacionesApi = this.filterByIdOptions(lista, Number(programId), ['program_id','programId','programa_id','id_program','idPrograma']);
+          this.operacionesApi = this.filterByIdOptions(lista as Record<string, any>[], Number(programId), ['program_id','programId','programa_id','id_program','idPrograma']) as Catalogo[];
           this.certificacionForm.get('operacionId')?.enable();
         },
         error: _ => { this.operacionesApi = []; }
@@ -191,13 +218,11 @@ export class Certificar implements OnInit {
 
   // -------- Carga inicial --------
   private cargarUsuariosCache(): void {
-    console.log('Cargando usuarios para búsqueda instantánea...');
     this.cargandoCache.set(true);
     this.api.getAllUsers().subscribe({
       next: (users) => {
         this.usuariosCache.set(users);
         this.cargandoCache.set(false);
-        console.log(`✅ Cache de usuarios cargada: ${users.length} usuarios - Búsqueda ahora es INSTANTÁNEA`);
       },
       error: (err) => {
         console.error('Error cargando cache de usuarios:', err);
@@ -216,7 +241,7 @@ export class Certificar implements OnInit {
   // -------- Cargar catálogos raíz --------
   private cargarAreas(): void {
     this.api.getAreas().subscribe({
-      next: areas => this.areasApi = areas ?? [],
+      next: areas => this.areasApi = (areas as Catalogo[]) ?? [],
       error: _ => this.areasApi = []
     });
   }
@@ -370,10 +395,6 @@ export class Certificar implements OnInit {
       return;
     }
 
-    console.log('Datos del formulario:', raw);
-    console.log('Operación ID:', opId);
-    console.log('Porcentaje:', porcentaje);
-
     // No permitir bajar
     if (porcentaje < actual) {
       Swal.fire({ icon: 'warning', title: 'No puedes bajar el nivel', text: `Nivel actual: ${actual}%.` });
@@ -408,8 +429,6 @@ export class Certificar implements OnInit {
         fecha_certificacion: String(raw.fechaEvaluacion),
         notas
       };
-      
-      console.log('Payload a enviar:', payload);
       
       this.api.createCertification(payload).subscribe({
         next: _ => {
@@ -450,7 +469,7 @@ export class Certificar implements OnInit {
            !!this.certificacionForm.value.operacionId;
   }
   get puedeIniciarCertificacion(): boolean {
-    return this.formularioCompleto && !this.guardando();
+    return this.formularioCompleto && !this.cargandoGuardado();
   }
   onNumeroEmpleadoInput(e: any) {
     const v = String(e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4);

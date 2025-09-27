@@ -1,8 +1,10 @@
+/*=================[Navbar Principal]=========*/
 .bg-corporate {
   background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%) !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/*=================[Brand y Logo]=========*/
 .navbar-brand {
   font-size: 1.4rem;
   color: white !important;
@@ -12,6 +14,20 @@
   color: #e0e7ff !important;
 }
 
+.navbar-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  transition: all 0.3s ease;
+  filter: brightness(0) saturate(100%) invert(100%);
+}
+
+.navbar-brand:hover .navbar-logo {
+  filter: brightness(0) saturate(100%) invert(89%) sepia(15%) saturate(464%) hue-rotate(200deg) brightness(106%) contrast(106%);
+  transform: scale(1.1);
+}
+
+/*=================[Links de Navegación]=========*/
 .nav-link {
   color: rgba(255, 255, 255, 0.9) !important;
   font-weight: 500;
@@ -23,24 +39,34 @@
 .nav-link:hover {
   color: white !important;
   background-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .nav-link.active {
   color: white !important;
   background-color: rgba(255, 255, 255, 0.2);
-  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.navbar-toggler {
-  border-color: rgba(255, 255, 255, 0.3);
+/*=================[Separador y Acciones]=========*/
+.navbar-divider {
+  border: none;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin: 0.5rem 1rem;
+  display: none;
 }
 
-.navbar-toggler:focus {
-  box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+.action-item {
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
-/* Responsive: mejorar el menú en móvil */
+.action-item:hover {
+  color: #fecaca !important;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+/*=================[Responsive]=========*/
 @media (max-width: 991.98px) {
   .navbar-collapse {
     margin-top: 0.5rem;
@@ -53,5 +79,9 @@
     padding: 0.75rem 1rem !important;
     margin: 0.25rem 0;
     text-align: center;
+  }
+
+  .navbar-divider {
+    display: block;
   }
 }

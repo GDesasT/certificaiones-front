@@ -1,74 +1,119 @@
-// src/app/services/certificaciones.service.ts
-import { Injectable } from '@angular/core';
+//=================[Servicio de Certificaciones]=========
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { map, timeout, catchError } from 'rxjs/operators';
-import { throwError } from 'rxjs';
+import { map, timeout, catchError, shareReplay } from 'rxjs/operators';
+import { throwError, Observable, of } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class CertificacionesService {
-  private base = environment.apiBase;
+  private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
+  
+  // Cache para catálogos
+  private readonly cache = new Map<string, Observable<any>>();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
-  constructor(private http: HttpClient) {}
+  //=================[Métodos Genéricos]=========
+  private getCachedData<T>(key: string, requestFn: () => Observable<T>): Observable<T> {
+    if (this.cache.has(key)) {
+      return this.cache.get(key)!;
+    }
 
-  // Catálogos con filtros:
+    const request$ = requestFn().pipe(
+      shareReplay({ refCount: true, bufferSize: 1 }),
+      catchError(this.handleError)
+    );
+
+    this.cache.set(key, request$);
+    
+    // Clear cache after duration
+    setTimeout(() => this.cache.delete(key), this.CACHE_DURATION);
+    
+    return request$;
+  }
+
+  private extractArrayFromResponse<T>(response: any, arrayKeys: string[] = ['data', 'items', 'rows', 'result', 'results']): T[] {
+    const candidates = arrayKeys.map(key => response?.[key]).concat([response]);
+    const firstArray = candidates.find(x => Array.isArray(x));
+    return (firstArray as T[]) ?? [];
+  }
+
+  private handleError = (error: any) => {
+    // Solo logging en desarrollo
+    if (!environment.production) {
+      console.error('API Error:', error);
+    }
+    return throwError(() => error);
+  };
+
+  //=================[Catálogos Optimizados con Cache]=========
   getAreas() {
-    return this.http.get<{ areas: any[] }>(`${this.base}/areas`)
-      .pipe(map(r => (r as any).areas ?? (r as any)));
+    return this.getCachedData('areas', () =>
+      this.http.get<{ areas: any[] }>(`${this.base}/areas`)
+        .pipe(map(r => this.extractArrayFromResponse(r, ['areas'])))
+    );
   }
 
   getLinesByArea(areaId: number) {
-    const params = new HttpParams().set('area_id', String(areaId));
-    return this.http.get<{ lines: any[] }>(`${this.base}/lines`, { params })
-      .pipe(map(r => (r as any).lines ?? (r as any)));
+    const key = `lines_${areaId}`;
+    return this.getCachedData(key, () => {
+      const params = new HttpParams().set('area_id', String(areaId));
+      return this.http.get<{ lines: any[] }>(`${this.base}/lines`, { params })
+        .pipe(map(r => this.extractArrayFromResponse(r, ['lines'])));
+    });
   }
 
   getProgramsByLine(lineId: number) {
-    const params = new HttpParams().set('line_id', String(lineId));
-    return this.http.get<{ programs: any[] }>(`${this.base}/programs`, { params })
-      .pipe(map(r => (r as any).programs ?? (r as any)));
+    const key = `programs_${lineId}`;
+    return this.getCachedData(key, () => {
+      const params = new HttpParams().set('line_id', String(lineId));
+      return this.http.get<{ programs: any[] }>(`${this.base}/programs`, { params })
+        .pipe(map(r => this.extractArrayFromResponse(r, ['programs'])));
+    });
   }
 
   getOperationsByProgram(programId: number) {
-    const params = new HttpParams().set('program_id', String(programId));
-    return this.http.get<{ operations: any[] }>(`${this.base}/operations`, { params })
-      .pipe(map(r => (r as any).operations ?? (r as any)));
+    const key = `operations_${programId}`;
+    return this.getCachedData(key, () => {
+      const params = new HttpParams().set('program_id', String(programId));
+      return this.http.get<{ operations: any[] }>(`${this.base}/operations`, { params })
+        .pipe(map(r => this.extractArrayFromResponse(r, ['operations'])));
+    });
   }
 
-  // Búsqueda de usuario con timeout:
+  //=================[Búsqueda de Usuarios Optimizada]=========
   findUserByNumber(employee_number: string) {
     return this.http.get<{ user: any }>(`${this.base}/users/by-number/${employee_number}`)
       .pipe(
-        timeout(5000), // Timeout de 5 segundos
+        timeout(5000),
         map(r => r.user ?? null),
         catchError(error => {
           if (error.name === 'TimeoutError') {
-            console.error('La búsqueda del empleado tomó demasiado tiempo');
+            console.error('Búsqueda de empleado timeout');
             return throwError(() => new Error('Búsqueda del empleado toma demasiado tiempo. Verifica la conexión.'));
           }
-          return throwError(() => error);
+          return this.handleError(error);
         })
       );
   }
 
-  // Obtener todos los usuarios para cache local (búsqueda instantánea)
   getAllUsers() {
-    return this.http.get<{ users: any[] }>(`${this.base}/users`)
-      .pipe(
-        map(r => {
-          const users = r.users ?? r ?? [];
-          return users.map((user: any) => ({
-            employee_number: user.employee_number || '',
-            name: user.name || ''
-          }));
-        }),
-        catchError(error => {
-          console.error('Error cargando usuarios:', error);
-          return throwError(() => error);
-        })
-      );
+    return this.getCachedData('users', () =>
+      this.http.get<{ users: any[] }>(`${this.base}/users`)
+        .pipe(
+          map(r => {
+            const users = this.extractArrayFromResponse(r, ['users']);
+            return users.map((user: any) => ({
+              employee_number: user.employee_number || '',
+              name: user.name || ''
+            }));
+          })
+        )
+    );
   }
 
+  //=================[Certificaciones CRUD]=========
   createCertification(payload: {
     employee_number: string;
     trainer_employee_number?: string;
@@ -77,42 +122,47 @@ export class CertificacionesService {
     fecha_certificacion: string;
     notas?: string | null;
   }) {
-    return this.http.post(`${this.base}/certifiers`, payload);
+    return this.http.post(`${this.base}/certifiers`, payload)
+      .pipe(catchError(this.handleError));
   }
 
-  // Actualiza solo el porcentaje de una certificación existente (no permite bajar en UI)
   updateCertificationPercent(payload: {
     employee_number: string;
     operation_id: number;
     porcentaje: number;
     notas?: string | null;
   }) {
-    return this.http.put(`${this.base}/certifiers/update-percent`, payload);
+    return this.http.put(`${this.base}/certifiers/update-percent`, payload)
+      .pipe(catchError(this.handleError));
   }
 
-  // Historial de certificaciones por empleado
+  //=================[Consulta de Certificaciones Unificada]=========
   getCertificationsByEmployee(employee_number: string) {
+    const url = `${this.base}/certifiers-by-employee/${encodeURIComponent(employee_number)}`;
+    
     return this.http
-      .get<any>(`${this.base}/certifiers-by-employee/${encodeURIComponent(employee_number)}`)
+      .get<any>(url)
       .pipe(
-        map((r: any) => {
-          const candidates = [r?.certificaciones, r?.certifiers, r?.data, r?.items, r?.rows, r?.result, r?.results, r];
-          const firstArray = candidates.find((x) => Array.isArray(x));
-          return (firstArray as any[]) ?? [];
-        })
+        map(r => this.extractArrayFromResponse(r, ['certificaciones', 'certifiers', 'data', 'items', 'rows', 'result', 'results'])),
+        catchError(this.handleError)
       );
   }
 
-  // Certificaciones globales con datos de usuario (para Matriz)
   getCertifiersWithUsers() {
     return this.http
       .get<any>(`${this.base}/certifiers-with-users`)
       .pipe(
-        map((r: any) => {
-          const candidates = [r?.certificaciones, r?.certifiers, r?.data, r?.items, r?.rows, r?.result, r?.results, r];
-          const firstArray = candidates.find((x) => Array.isArray(x));
-          return (firstArray as any[]) ?? [];
-        })
+        map(r => this.extractArrayFromResponse(r, ['certificaciones', 'certifiers', 'data', 'items', 'rows', 'result', 'results'])),
+        catchError(this.handleError)
       );
+  }
+
+  //=================[Cache Management]=========
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  clearCacheKey(key: string): void {
+    this.cache.delete(key);
   }
 }

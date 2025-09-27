@@ -1,4 +1,4 @@
-/* Variables CSS globales - Paleta Profesional con Azul Corporativo */
+/*=================[Variables CSS Globales - Paleta Profesional con Azul Corporativo]=========*/
 :root {
   /* Paleta azul corporativa principal */
   --corporate-blue-50: #eff6ff;
@@ -81,7 +81,7 @@
   --space-3xl: 4rem;
 }
 
-/* Reset y configuración base */
+/*=================[Reset y Configuración Base]=========*/
 * {
   margin: 0;
   padding: 0;
@@ -104,7 +104,7 @@ body {
   font-weight: 400;
 }
 
-/* Tipografía profesional */
+/*=================[Tipografía Profesional]=========*/
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   line-height: 1.25;
@@ -124,7 +124,7 @@ p {
   color: var(--text-secondary);
 }
 
-/* Utilidades de layout */
+/*=================[Utilidades de Layout]=========*/
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -153,7 +153,7 @@ p {
 .gap-lg { gap: var(--space-lg); }
 .gap-xl { gap: var(--space-xl); }
 
-/* Utilidades de texto */
+/*=================[Utilidades de Texto]=========*/
 .text-center { text-align: center; }
 .text-left { text-align: left; }
 .text-right { text-align: right; }
@@ -174,7 +174,7 @@ p {
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
 
-/* Personalización de Bootstrap con colores corporativos */
+/*=================[Personalización de Bootstrap con Colores Corporativos]=========*/
 :root {
   --bs-primary: #2563eb;
   --bs-primary-rgb: 37, 99, 235;
@@ -222,7 +222,7 @@ p {
   border-color: var(--corporate-blue-600);
 }
 
-/* Componentes personalizados con glassmorphism */
+/*=================[Componentes Personalizados con Glassmorphism]=========*/
 .glass-card {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
@@ -291,7 +291,7 @@ p {
   box-shadow: var(--shadow-md);
 }
 
-/* Utilidades de espaciado */
+/*=================[Utilidades de Espaciado]=========*/
 .m-0 { margin: 0; }
 .mt-xs { margin-top: var(--space-xs); }
 .mt-sm { margin-top: var(--space-sm); }
@@ -306,7 +306,7 @@ p {
 .p-lg { padding: var(--space-lg); }
 .p-xl { padding: var(--space-xl); }
 
-/* Estados de interacción */
+/*=================[Estados de Interacción]=========*/
 .hover\:shadow:hover {
   box-shadow: var(--shadow-md);
 }
@@ -316,7 +316,7 @@ p {
   outline-offset: 2px;
 }
 
-/* Responsive breakpoints */
+/*=================[Breakpoints Responsivos]=========*/
 @media (max-width: 1200px) {
   .container { max-width: 960px; }
 }
@@ -351,12 +351,12 @@ p {
   h3 { font-size: 1.25rem; }
 }
 
-/* Estilos para navbar fijo */
+/*=================[Estilos para Navbar Fijo]=========*/
 body {
   padding-top: 76px; /* Altura aproximada del navbar */
 }
 
-/* Mejorar dropdown menus */
+/*=================[Mejoras para Dropdown Menus]=========*/
 .dropdown-menu {
   border: none;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -382,7 +382,7 @@ body {
   padding-bottom: 0.25rem;
 }
 
-/* Badge de notificaciones mejorado */
+/*=================[Badge de Notificaciones Mejorado]=========*/
 .badge {
   font-size: 0.7rem;
 }

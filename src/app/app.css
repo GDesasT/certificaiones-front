@@ -1,5 +1,10 @@
-/* Solución simple: solo un padding-top fijo */
+/*=================[Contenido Principal]=========*/
 .main-content {
   padding-top: 80px; /* Altura del navbar + margen */
   min-height: 100vh;
+}
+
+/*=================[Sin Navbar (Página de Login)]=========*/
+.main-content.no-navbar {
+  padding-top: 0;
 }

@@ -1,7 +1,9 @@
-import { Component, signal } from '@angular/core';
+//=================[Importaciones]=========
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 
+//=================[Interfaces]=========
 interface DashboardButton {
   title: string;
   description: string;
@@ -9,6 +11,7 @@ interface DashboardButton {
   route: string;
 }
 
+//=================[Componente Home]=========
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -17,9 +20,11 @@ interface DashboardButton {
   styleUrl: './home.css'
 })
 export class Home {
-  protected readonly projectTitle = signal('Global Safety System');
-  protected readonly projectSubtitle = signal('Sistema integral de certificaciones y competencias de seguridad');
+  //=================[Propiedades del Proyecto]=========
+  protected readonly projectTitle = 'GLOBAL SAFETY TEXTILES';
+  protected readonly projectSubtitle = 'Sistema integral de certificaciones y competencias de seguridad';
 
+  //=================[Configuración de Botones del Dashboard]=========
   buttons: DashboardButton[] = [
     {
       title: 'Certificar Personas',
@@ -43,6 +48,7 @@ export class Home {
 
   constructor(private router: Router) {}
 
+  //=================[Navegación]=========
   navigateTo(route: string): void {
     this.router.navigate([route]);
   }

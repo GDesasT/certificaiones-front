@@ -1,5 +1,5 @@
-// src/environments/environment.ts
+//=================[Configuración de Entorno]=========
 export const environment = {
   production: false,
-  apiBase: 'http://localhost:8000/api', // ajusta a tu host/api
+  apiBase: 'http://localhost:8000/api',
 };

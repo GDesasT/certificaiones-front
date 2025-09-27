@@ -1,6 +1,8 @@
 
+/*=================[Importaciones de Estilos Globales]=========*/
 @import url('./assets/styles/globals.css');
 
+/*=================[Configuración Base de la Aplicación]=========*/
 html, body { 
   height: 100%; 
   margin: 0; 
