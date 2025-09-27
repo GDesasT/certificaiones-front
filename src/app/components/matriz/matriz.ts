@@ -7,6 +7,8 @@ interface MatrizData {
   empleado: {
     numero: string;
     nombre: string;
+    fechaIngreso: string;
+    fechaCertificacion: string;
   };
   certificaciones: { [operacion: string]: number };
 }
@@ -20,12 +22,14 @@ interface MatrizData {
 export class Matriz {
   // Signals
   lineaSeleccionada = signal<string>('todas');
-  private registros = signal<Array<{
+  registros = signal<Array<{
     empleadoNumero: string;
     empleadoNombre: string;
-    linea: string; // "CODE - NAME"
-    operacion: string; // "CODE - NAME"
-    porcentaje: number; // 0|25|50|75|100
+    empleadoFechaIngreso: string;
+    empleadoFechaCertificacion: string;
+    linea: string;
+    operacion: string;
+    porcentaje: number;
   }>>([]);
   
   // Datos computados
@@ -56,29 +60,38 @@ export class Matriz {
       ? certificaciones
       : certificaciones.filter(cert => cert.linea === linea);
 
-    // Empleados únicos visibles en esta vista
-    const empleadosUnicos = Array.from(
-      new Map(
-        certsFiltradas.map(c => [c.empleadoNumero, { numero: c.empleadoNumero, nombre: c.empleadoNombre }])
-      ).values()
-    );
-
-    return empleadosUnicos.map(empleado => {
-      const certEmpleado = certsFiltradas.filter(cert => cert.empleadoNumero === empleado.numero);
-      const certificacionesPorOperacion: { [operacion: string]: number } = {};
-
-      // Inicializar todas las operaciones con 0
-      this.operacionesPorLinea().forEach(operacion => {
-        certificacionesPorOperacion[operacion] = 0;
-      });
-
-      // Llenar con los porcentajes reales
-      certEmpleado.forEach(cert => {
-        certificacionesPorOperacion[cert.operacion] = cert.porcentaje ?? 0;
-      });
-
-      return { empleado, certificaciones: certificacionesPorOperacion };
+    // Agrupar por empleado
+    const empleadosMap = new Map();
+    certsFiltradas.forEach(cert => {
+      const key = cert.empleadoNumero;
+      if (!empleadosMap.has(key)) {
+        empleadosMap.set(key, {
+          empleado: {
+            numero: cert.empleadoNumero,
+            nombre: cert.empleadoNombre,
+            fechaIngreso: cert.empleadoFechaIngreso,
+            fechaCertificacion: cert.empleadoFechaCertificacion
+          },
+          certificaciones: {}
+        });
+      }
+      const empleado = empleadosMap.get(key);
+      empleado.certificaciones[cert.operacion] = cert.porcentaje;
     });
+
+    // Convertir el mapa en array y asegurar que todos tengan todas las operaciones
+    const resultados = Array.from(empleadosMap.values());
+    const operaciones = this.operacionesPorLinea();
+    
+    resultados.forEach(emp => {
+      const certificacionesPorOperacion: any = {};
+      operaciones.forEach(op => {
+        certificacionesPorOperacion[op] = emp.certificaciones[op] || 0;
+      });
+      emp.certificaciones = certificacionesPorOperacion;
+    });
+
+    return resultados;
   });
 
   // Métodos
@@ -94,6 +107,20 @@ export class Matriz {
     if (porcentaje === 90) return 'cert-90';
     if (porcentaje === 100) return 'cert-100';
     return 'cert-none';
+  }
+
+  formatearFecha(fecha: string): string {
+    if (!fecha) return '';
+    try {
+      const fechaObj = new Date(fecha);
+      return fechaObj.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch {
+      return fecha; // Si hay error, devolver la fecha original
+    }
   }
 
   exportarPDF(): void {
@@ -114,6 +141,7 @@ export class Matriz {
   }
 
   private cargarDatos() {
+    // Usar la API real
     this.svc.getCertifiersWithUsers().subscribe({
       next: (rows: any[]) => {
         const mapeados = rows
@@ -128,9 +156,11 @@ export class Matriz {
     });
   }
 
-  private mapRow(r: any): { empleadoNumero: string; empleadoNombre: string; linea: string; operacion: string; porcentaje: number } {
-    const empleadoNumero = r?.employee_number || r?.numeroEmpleado || r?.employee_number || r?.user?.employee_number || '';
+  private mapRow(r: any): { empleadoNumero: string; empleadoNombre: string; empleadoFechaIngreso: string; empleadoFechaCertificacion: string; linea: string; operacion: string; porcentaje: number } {
+    const empleadoNumero = r?.employee_number || r?.numeroEmpleado || r?.user?.employee_number || '';
     const empleadoNombre = r?.user?.name || r?.user?.nombre || r?.nombre || '';
+    const empleadoFechaIngreso = r?.user?.fecha_ingreso || r?.user?.hire_date || r?.fecha_ingreso || '';
+    const empleadoFechaCertificacion = r?.fecha_certificacion || r?.certification_date || '';
 
     // Línea: objeto o string
     const lineaObj = r?.line || r?.linea || r?.operation?.line || r?.operacion?.linea;
@@ -154,7 +184,7 @@ export class Matriz {
       r?.porcentaje ?? r?.percentage ?? r?.porcentajeCertificacion ?? r?.percent ?? 0
     ) || 0;
 
-    return { empleadoNumero, empleadoNombre, linea, operacion, porcentaje };
+    return { empleadoNumero, empleadoNombre, empleadoFechaIngreso, empleadoFechaCertificacion, linea, operacion, porcentaje };
   }
 
   private composeLabel(objOrStr: any, codeKeys: string[], nameKeys: string[], fallbackPrefix?: string): string {

@@ -130,8 +130,11 @@
               <table class="modern-table">
                 <thead>
                   <tr>
-                    <th class="col-emp-num">#</th>
-                    <th class="col-emp-name">EMPLEADO</th>
+                    <th class="col-emp-num">N° Orden</th>
+                    <th class="col-emp-num">N° Empleado</th>
+                    <th class="col-emp-name">Nombre</th>
+                    <th class="col-date">Fecha Ingreso</th>
+                    <th class="col-date">Fecha Certificación</th>
                     @for (operacion of operacionesPorLinea(); track operacion) {
                       <th class="col-operation">
                         <div class="op-header">
@@ -143,10 +146,13 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (fila of matrizData(); track fila.empleado.numero) {
+                  @for (fila of matrizData(); track $index) {
                     <tr>
+                      <td class="col-emp-num">{{ $index + 1 }}</td>
                       <td class="col-emp-num">{{ fila.empleado.numero }}</td>
                       <td class="col-emp-name">{{ fila.empleado.nombre }}</td>
+                      <td class="col-date">{{ formatearFecha(fila.empleado.fechaIngreso) }}</td>
+                      <td class="col-date">{{ formatearFecha(fila.empleado.fechaCertificacion) }}</td>
                       @for (operacion of operacionesPorLinea(); track operacion) {
                         <td class="col-operation">
                           <div 
@@ -164,7 +170,7 @@
                     </tr>
                   } @empty {
                     <tr>
-                      <td [attr.colspan]="2 + operacionesPorLinea().length" class="empty-state">
+                      <td [attr.colspan]="5 + operacionesPorLinea().length" class="empty-state">
                         <i class="bi bi-inbox"></i>
                         <span>No hay datos disponibles</span>
                       </td>
