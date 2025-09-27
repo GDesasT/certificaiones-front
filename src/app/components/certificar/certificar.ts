@@ -3,6 +3,7 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CertificacionesService } from '../../services/certificaciones.service';
+import { debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
 import Swal from 'sweetalert2';
 import { COMPETENCIAS_25_MOCK, COMPETENCIAS_50_MOCK, COMPETENCIAS_75_MOCK, COMPETENCIAS_100_MOCK } from '../../models/certificacion.models';
 
@@ -19,11 +20,16 @@ export class Certificar implements OnInit {
   private readonly empleadoActual = signal<{ numero: string; nombre: string | null } | null>(null);
   private readonly modalAbierto = signal<number | null>(null);
   private readonly cargandoGuardado = signal(false);
+  private readonly buscandoEmpleado = signal(false);
+  private readonly cargandoCache = signal(true);
+  private readonly usuariosCache = signal<Array<{ employee_number: string; name: string }>>([]);
   readonly competenciasSeleccionadas = signal<{ [id: string]: boolean }>({});
 
   readonly datosEmpleado = computed(() => this.empleadoActual());
   readonly modalActivo = computed(() => this.modalAbierto());
   readonly guardando = computed(() => this.cargandoGuardado());
+  readonly buscando = computed(() => this.buscandoEmpleado());
+  readonly cacheReady = computed(() => !this.cargandoCache());
 
   certificacionForm!: FormGroup;
 
@@ -45,6 +51,7 @@ export class Certificar implements OnInit {
   ngOnInit(): void {
     this.certificacionForm.patchValue({ fechaEvaluacion: this.hoyISO() });
     this.cargarAreas();
+    this.cargarUsuariosCache(); // Cargar todos los usuarios al inicio
     this.wireCascada();
     this.initCompetencias();
   }
@@ -68,23 +75,69 @@ export class Certificar implements OnInit {
       notas: ['']
     });
 
-  // Nombre automático
-    this.certificacionForm.get('numeroEmpleado')?.valueChanges.subscribe((num: string) => {
-      if (!num || num.length !== 4) { this.resetEmpleado(); return; }
-      this.api.findUserByNumber(num).subscribe({
-        next: user => {
-          const nombre = user?.name ?? null;
-          this.empleadoActual.set({ numero: num, nombre });
-          this.certificacionForm.patchValue({ nombre: nombre ?? '' });
+  // Nombre automático INSTANTÁNEO con cache local
+    this.certificacionForm.get('numeroEmpleado')?.valueChanges.pipe(
+      debounceTime(100), // Reducido a 100ms solo para evitar demasiadas actualizaciones
+      distinctUntilChanged()
+    ).subscribe((num: string) => {
+      if (!num || num.length !== 4) { 
+        this.resetEmpleado(); 
+        return; 
+      }
+      
+      // BÚSQUEDA INSTANTÁNEA en cache local
+      const usuarioLocal = this.buscarUsuarioLocal(num);
+      
+      if (usuarioLocal) {
+        // ✅ ENCONTRADO EN CACHE - INSTANTÁNEO
+        const nombre = usuarioLocal.name;
+        this.empleadoActual.set({ numero: num, nombre });
+        this.certificacionForm.patchValue({ nombre });
+        this.cargarHistorialEmpleado(num);
+        return;
+      }
+      
+      // Si no está en cache, intentar búsqueda en backend como fallback
+      const cacheVacia = this.usuariosCache().length === 0;
+      
+      if (cacheVacia) {
+        // Cache aún no se ha cargado, usar método original
+        this.buscandoEmpleado.set(true);
+        this.certificacionForm.patchValue({ nombre: 'Buscando...' });
+        
+        this.api.findUserByNumber(num).subscribe({
+          next: user => {
+            const nombre = user?.name ?? null;
+            this.empleadoActual.set({ numero: num, nombre });
+            this.certificacionForm.patchValue({ nombre: nombre ?? 'No encontrado' });
+            this.buscandoEmpleado.set(false);
 
-          // Cargar historial del empleado para conocer su porcentaje actual por operación
-          this.cargarHistorialEmpleado(num);
-        },
-        error: _ => {
-          this.empleadoActual.set({ numero: num, nombre: null });
-          this.certificacionForm.patchValue({ nombre: '' });
-        }
-      });
+            if (nombre) {
+              this.cargarHistorialEmpleado(num);
+            }
+          },
+          error: err => {
+            console.error('Error buscando empleado:', err);
+            this.empleadoActual.set({ numero: num, nombre: null });
+            this.buscandoEmpleado.set(false);
+            
+            let errorMsg = 'Error al buscar';
+            if (err.message && err.message.includes('demasiado tiempo')) {
+              errorMsg = 'Búsqueda lenta';
+            } else if (err.status === 404) {
+              errorMsg = 'No encontrado';
+            } else if (err.status === 500) {
+              errorMsg = 'Error servidor';
+            }
+            
+            this.certificacionForm.patchValue({ nombre: errorMsg });
+          }
+        });
+      } else {
+        // Cache cargada pero usuario no encontrado
+        this.empleadoActual.set({ numero: num, nombre: null });
+        this.certificacionForm.patchValue({ nombre: 'No encontrado' });
+      }
     });
   }
 
@@ -136,6 +189,30 @@ export class Certificar implements OnInit {
     });
   }
 
+  // -------- Carga inicial --------
+  private cargarUsuariosCache(): void {
+    console.log('Cargando usuarios para búsqueda instantánea...');
+    this.cargandoCache.set(true);
+    this.api.getAllUsers().subscribe({
+      next: (users) => {
+        this.usuariosCache.set(users);
+        this.cargandoCache.set(false);
+        console.log(`✅ Cache de usuarios cargada: ${users.length} usuarios - Búsqueda ahora es INSTANTÁNEA`);
+      },
+      error: (err) => {
+        console.error('Error cargando cache de usuarios:', err);
+        this.cargandoCache.set(false);
+        // Si falla, seguir usando el método original
+      }
+    });
+  }
+
+  // -------- Búsqueda local instantánea --------
+  private buscarUsuarioLocal(employee_number: string): { employee_number: string; name: string } | null {
+    const usuarios = this.usuariosCache();
+    return usuarios.find(user => user.employee_number === employee_number) || null;
+  }
+
   // -------- Cargar catálogos raíz --------
   private cargarAreas(): void {
     this.api.getAreas().subscribe({
@@ -147,6 +224,7 @@ export class Certificar implements OnInit {
   // -------- Resets dependientes --------
   private resetEmpleado(): void {
     this.empleadoActual.set(null);
+    this.buscandoEmpleado.set(false);
     this.certificacionForm.patchValue({ nombre: '' });
   }
   private resetLineaProgramaOperacion(): void {
@@ -271,6 +349,31 @@ export class Certificar implements OnInit {
     const actual = this.porcentajeActualOperacion(opId);
     const notas = (raw.notas ?? '').trim() || null;
 
+    // Validaciones adicionales antes de enviar
+    if (!raw.numeroEmpleado || raw.numeroEmpleado.length !== 4) {
+      Swal.fire({ icon: 'warning', title: 'Número de empleado inválido', text: 'El número de empleado debe tener 4 dígitos.' });
+      return;
+    }
+    
+    if (!raw.trainerNumber || raw.trainerNumber.length !== 4) {
+      Swal.fire({ icon: 'warning', title: 'Número de entrenador inválido', text: 'El número de entrenador debe tener 4 dígitos.' });
+      return;
+    }
+    
+    if (!opId || opId <= 0) {
+      Swal.fire({ icon: 'warning', title: 'Operación no válida', text: 'Debes seleccionar una operación válida.' });
+      return;
+    }
+    
+    if (!raw.fechaEvaluacion) {
+      Swal.fire({ icon: 'warning', title: 'Fecha no válida', text: 'La fecha de evaluación es requerida.' });
+      return;
+    }
+
+    console.log('Datos del formulario:', raw);
+    console.log('Operación ID:', opId);
+    console.log('Porcentaje:', porcentaje);
+
     // No permitir bajar
     if (porcentaje < actual) {
       Swal.fire({ icon: 'warning', title: 'No puedes bajar el nivel', text: `Nivel actual: ${actual}%.` });
@@ -281,7 +384,7 @@ export class Certificar implements OnInit {
     if (actual > 0) {
       // Actualiza porcentaje (PUT)
       this.api.updateCertificationPercent({
-        number_employee: String(raw.numeroEmpleado),
+        employee_number: String(raw.numeroEmpleado),
         operation_id: opId,
         porcentaje,
         notas
@@ -297,20 +400,34 @@ export class Certificar implements OnInit {
       });
     } else {
       // Crea certificación (POST)
-      this.api.createCertification({
-        number_employee: String(raw.numeroEmpleado),
-        trainer_number_employee: String(raw.trainerNumber),
+      const payload = {
+        employee_number: String(raw.numeroEmpleado),
+        trainer_employee_number: String(raw.trainerNumber),
         operation_id: opId,
         porcentaje,
         fecha_certificacion: String(raw.fechaEvaluacion),
         notas
-      }).subscribe({
+      };
+      
+      console.log('Payload a enviar:', payload);
+      
+      this.api.createCertification(payload).subscribe({
         next: _ => {
           Swal.fire({ icon: 'success', title: 'Certificación creada', text: `Nivel: ${porcentaje}%` });
           this.cerrarModal();
           this.cargarHistorialEmpleado(String(raw.numeroEmpleado));
         },
-        error: e => Swal.fire({ icon: 'error', title: 'Error al guardar', text: e?.error?.error || e?.error?.message || 'Ocurrió un error' }),
+        error: e => {
+          console.error('Error completo:', e);
+          console.error('Error body:', e?.error);
+          const errorMsg = e?.error?.message || e?.error?.error || e?.message || 'Ocurrió un error';
+          Swal.fire({ 
+            icon: 'error', 
+            title: 'Error al guardar', 
+            text: errorMsg,
+            footer: `Código: ${e?.status || 'N/A'}`
+          });
+        },
         complete: () => this.cargandoGuardado.set(false)
       });
     }

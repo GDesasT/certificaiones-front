@@ -2,7 +2,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { map } from 'rxjs/operators';
+import { map, timeout, catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class CertificacionesService {
@@ -34,15 +35,43 @@ export class CertificacionesService {
       .pipe(map(r => (r as any).operations ?? (r as any)));
   }
 
-  // Búsqueda de usuario (la recomendada):
-  findUserByNumber(number_employee: string) {
-    return this.http.get<{ user: any }>(`${this.base}/users/by-number/${number_employee}`)
-      .pipe(map(r => r.user ?? null));
+  // Búsqueda de usuario con timeout:
+  findUserByNumber(employee_number: string) {
+    return this.http.get<{ user: any }>(`${this.base}/users/by-number/${employee_number}`)
+      .pipe(
+        timeout(5000), // Timeout de 5 segundos
+        map(r => r.user ?? null),
+        catchError(error => {
+          if (error.name === 'TimeoutError') {
+            console.error('La búsqueda del empleado tomó demasiado tiempo');
+            return throwError(() => new Error('Búsqueda del empleado toma demasiado tiempo. Verifica la conexión.'));
+          }
+          return throwError(() => error);
+        })
+      );
+  }
+
+  // Obtener todos los usuarios para cache local (búsqueda instantánea)
+  getAllUsers() {
+    return this.http.get<{ users: any[] }>(`${this.base}/users`)
+      .pipe(
+        map(r => {
+          const users = r.users ?? r ?? [];
+          return users.map((user: any) => ({
+            employee_number: user.employee_number || '',
+            name: user.name || ''
+          }));
+        }),
+        catchError(error => {
+          console.error('Error cargando usuarios:', error);
+          return throwError(() => error);
+        })
+      );
   }
 
   createCertification(payload: {
-    number_employee: string;
-    trainer_number_employee?: string;
+    employee_number: string;
+    trainer_employee_number?: string;
     operation_id: number;
     porcentaje: number;
     fecha_certificacion: string;
@@ -53,7 +82,7 @@ export class CertificacionesService {
 
   // Actualiza solo el porcentaje de una certificación existente (no permite bajar en UI)
   updateCertificationPercent(payload: {
-    number_employee: string;
+    employee_number: string;
     operation_id: number;
     porcentaje: number;
     notas?: string | null;
@@ -62,9 +91,9 @@ export class CertificacionesService {
   }
 
   // Historial de certificaciones por empleado
-  getCertificationsByEmployee(number_employee: string) {
+  getCertificationsByEmployee(employee_number: string) {
     return this.http
-      .get<any>(`${this.base}/certifiers-by-employee/${encodeURIComponent(number_employee)}`)
+      .get<any>(`${this.base}/certifiers-by-employee/${encodeURIComponent(employee_number)}`)
       .pipe(
         map((r: any) => {
           const candidates = [r?.certificaciones, r?.certifiers, r?.data, r?.items, r?.rows, r?.result, r?.results, r];

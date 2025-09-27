@@ -16,7 +16,7 @@ interface MenuItem {
   styleUrl: './navbar.css'
 })
 export class Navbar {
-  companyName = 'Sistema de Certificaciones';
+  companyName = 'CertiSafe';
   
   menuItems: MenuItem[] = [
     { name: 'Inicio', route: '/home', icon: 'bi-house-door' },

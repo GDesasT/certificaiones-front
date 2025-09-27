@@ -187,19 +187,19 @@ export class Certificaciones implements OnInit {
     let entrenador = '';
     if (trainerObj && typeof trainerObj === 'object') {
       const tName = trainerObj.name || trainerObj.nombre || '';
-      const tNum  = trainerObj.number_employee || trainerObj.employee_number || trainerObj.numeroEmpleado || trainerObj.numero || '';
+      const tNum  = trainerObj.employee_number || trainerObj.employee_number || trainerObj.numeroEmpleado || trainerObj.numero || '';
       entrenador = this.composeLabel(String(tNum), String(tName));
     } else if (typeof trainerObj === 'string') {
       entrenador = trainerObj;
     } else {
       const tName = r.trainer_name || r.user_trainer_name || r.nombre_entrenador || '';
-      const tNum  = r.trainer_number_employee || r.user_trainer_number || r.numero_entrenador || '';
+      const tNum  = r.trainer_employee_number || r.user_trainer_number || r.numero_entrenador || '';
       entrenador = this.composeLabel(String(tNum), String(tName));
     }
 
     return {
       id: String(r.id ?? r.cert_id ?? r.certifier_id ?? r.certificacion_id ?? this.randomId()),
-      numeroEmpleado: String(r.number_employee ?? r.numeroEmpleado ?? r.employee_number ?? ''),
+      numeroEmpleado: String(r.employee_number ?? r.numeroEmpleado ?? r.employee_number ?? ''),
       nombre: String(r.user_name ?? r.nombre ?? r.employee_name ?? ''),
       area,
       linea,

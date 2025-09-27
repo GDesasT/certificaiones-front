@@ -9,7 +9,7 @@
               <i class="bi bi-award-fill me-2"></i>
               CERTIFICACIÓN DE COSTURA PARA ACREDITAR NIVEL DE COMPETENCIA EN OPERACIÓN
             </h2>
-            <div class="company-logo"><span class="logo-text">GLOBAL SOFT PARTNER</span></div>
+            <div class="company-logo"><span class="logo-text">GLOBAL SAFETY SYSTEM</span></div>
           </div>
         </div>
       </div>
@@ -35,11 +35,25 @@
                        *ngIf="certificacionForm.get('numeroEmpleado')?.invalid && certificacionForm.get('numeroEmpleado')?.touched">
                     Ingrese un número de empleado válido (4 dígitos)
                   </div>
+                  <small class="text-success" *ngIf="cacheReady()">
+                    <i class="bi bi-lightning-fill"></i> Búsqueda instantánea
+                  </small>
+                  <small class="text-warning" *ngIf="!cacheReady()">
+                    <i class="bi bi-hourglass-split"></i> Cargando cache...
+                  </small>
                 </div>
                 <div class="col-md-5">
                   <label class="form-label">Nombre</label>
-                  <input type="text" class="form-control auto-filled" formControlName="nombre"
-                         placeholder="El nombre se llenará automáticamente" readonly>
+                  <div class="input-group">
+                    <input type="text" class="form-control auto-filled" formControlName="nombre"
+                           placeholder="El nombre se llenará automáticamente" readonly>
+                    <span class="input-group-text" *ngIf="buscando()">
+                      <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Buscando...</span>
+                      </div>
+                    </span>
+                  </div>
+                  <small class="text-muted" *ngIf="buscando()">Buscando empleado...</small>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label required">No. Empleado Entrenador</label>

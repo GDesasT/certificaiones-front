@@ -5,7 +5,7 @@ export interface Operation {
 }
 
 export interface CreateCertPayload {
-  number_employee: string;
+  employee_number: string;
   operation_id: number;
   porcentaje: number;
   fecha_certificacion: string; // 'YYYY-MM-DD'

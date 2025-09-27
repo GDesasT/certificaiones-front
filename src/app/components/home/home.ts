@@ -17,8 +17,8 @@ interface DashboardButton {
   styleUrl: './home.css'
 })
 export class Home {
-  protected readonly projectTitle = signal('Sistema de Certificaciones');
-  protected readonly projectSubtitle = signal('Gestión integral de certificaciones y competencias');
+  protected readonly projectTitle = signal('Global Safety System');
+  protected readonly projectSubtitle = signal('Sistema integral de certificaciones y competencias de seguridad');
 
   buttons: DashboardButton[] = [
     {

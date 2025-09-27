@@ -10,7 +10,7 @@
               MATRIZ DE ENTRENAMIENTO
             </h2>
             <div class="company-logo">
-              <span class="logo-text">GLOBAL SOFT PARTNER</span>
+              <span class="logo-text">GLOBAL SAFETY SYSTEM</span>
             </div>
           </div>
         </div>
@@ -68,6 +68,48 @@
       </div>
     </div>
 
+    <!-- Leyenda de Porcentajes -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="legend-card">
+          <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-center justify-content-center gap-3">
+              <small class="legend-title">
+                <i class="bi bi-palette me-1"></i>
+                <strong>Leyenda:</strong>
+              </small>
+              <div class="legend-bubbles">
+                <div class="legend-bubble-item">
+                  <div class="cert-bubble mini cert-none">-</div>
+                  <span class="bubble-label">Sin cert.</span>
+                </div>
+                <div class="legend-bubble-item">
+                  <div class="cert-bubble mini cert-25">25</div>
+                  <span class="bubble-label">Básico</span>
+                </div>
+                <div class="legend-bubble-item">
+                  <div class="cert-bubble mini cert-50">50</div>
+                  <span class="bubble-label">Intermedio</span>
+                </div>
+                <div class="legend-bubble-item">
+                  <div class="cert-bubble mini cert-75">75</div>
+                  <span class="bubble-label">Avanzado</span>
+                </div>
+                <div class="legend-bubble-item">
+                  <div class="cert-bubble mini cert-90">90</div>
+                  <span class="bubble-label">Experto</span>
+                </div>
+                <div class="legend-bubble-item">
+                  <div class="cert-bubble mini cert-100">100</div>
+                  <span class="bubble-label">Certificado</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Matriz de Entrenamiento -->
     <div class="row">
       <div class="col-12">
@@ -84,26 +126,17 @@
             </h5>
           </div>
           <div class="card-body p-0">
-            <div class="table-responsive matriz-table-container">
-              <table class="table matriz-table mb-0">
-                <thead class="table-header sticky-header">
+            <div class="modern-table-wrapper">
+              <table class="modern-table">
+                <thead>
                   <tr>
-                    <th class="empleado-header">
-                      <div class="header-content">
-                        <div class="header-main">#</div>
-                        <div class="header-sub">EMPLEADO</div>
-                      </div>
-                    </th>
-                    <th class="nombre-header">
-                      <div class="header-content">
-                        <div class="header-main">NOMBRE</div>
-                      </div>
-                    </th>
-                    @for (operacion of operacionesPorLinea(); track operacion; let i = $index) {
-                      <th class="operacion-header">
-                        <div class="header-content">
-                          <div class="header-main">{{ formatearOperacion(operacion).codigo }}</div>
-                          <div class="header-sub">{{ formatearOperacion(operacion).nombre }}</div>
+                    <th class="col-emp-num">#</th>
+                    <th class="col-emp-name">EMPLEADO</th>
+                    @for (operacion of operacionesPorLinea(); track operacion) {
+                      <th class="col-operation">
+                        <div class="op-header">
+                          <div class="op-code">{{ formatearOperacion(operacion).codigo }}</div>
+                          <div class="op-name">{{ formatearOperacion(operacion).nombre }}</div>
                         </div>
                       </th>
                     }
@@ -111,23 +144,17 @@
                 </thead>
                 <tbody>
                   @for (fila of matrizData(); track fila.empleado.numero) {
-                    <tr class="matriz-row">
-                      <td class="empleado-cell">
-                        <strong>{{ fila.empleado.numero }}</strong>
-                      </td>
-                      <td class="nombre-cell">
-                        <div class="empleado-info">
-                          <span class="empleado-nombre">{{ fila.empleado.nombre }}</span>
-                        </div>
-                      </td>
+                    <tr>
+                      <td class="col-emp-num">{{ fila.empleado.numero }}</td>
+                      <td class="col-emp-name">{{ fila.empleado.nombre }}</td>
                       @for (operacion of operacionesPorLinea(); track operacion) {
-                        <td class="cert-cell">
+                        <td class="col-operation">
                           <div 
-                            class="cert-badge" 
+                            class="cert-bubble" 
                             [class]="obtenerClasePorcentaje(fila.certificaciones[operacion])"
                           >
                             @if (fila.certificaciones[operacion] > 0) {
-                              {{ fila.certificaciones[operacion] }}%
+                              {{ fila.certificaciones[operacion] }}
                             } @else {
                               -
                             }
@@ -137,50 +164,14 @@
                     </tr>
                   } @empty {
                     <tr>
-                      <td [attr.colspan]="operacionesPorLinea().length + 2" class="text-center py-4 text-muted">
-                        <i class="bi bi-inbox me-2"></i>
-                        No hay datos disponibles para mostrar
+                      <td [attr.colspan]="2 + operacionesPorLinea().length" class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <span>No hay datos disponibles</span>
                       </td>
                     </tr>
                   }
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Leyenda -->
-    <div class="row mt-4">
-      <div class="col-12">
-        <div class="legend-card">
-          <div class="card-body">
-            <h6 class="mb-3">
-              <i class="bi bi-info-circle me-2"></i>
-              Leyenda de Porcentajes
-            </h6>
-            <div class="d-flex flex-wrap gap-3 align-items-center">
-              <div class="legend-item">
-                <div class="cert-badge cert-none">-</div>
-                <span class="legend-text">Sin certificar</span>
-              </div>
-              <div class="legend-item">
-                <div class="cert-badge cert-25">25%</div>
-                <span class="legend-text">Básico</span>
-              </div>
-              <div class="legend-item">
-                <div class="cert-badge cert-50">50%</div>
-                <span class="legend-text">Intermedio</span>
-              </div>
-              <div class="legend-item">
-                <div class="cert-badge cert-75">75%</div>
-                <span class="legend-text">Avanzado</span>
-              </div>
-              <div class="legend-item">
-                <div class="cert-badge cert-100">100%</div>
-                <span class="legend-text">Certificado</span>
-              </div>
             </div>
           </div>
         </div>

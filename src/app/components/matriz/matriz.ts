@@ -91,6 +91,7 @@ export class Matriz {
     if (porcentaje === 25) return 'cert-25';
     if (porcentaje === 50) return 'cert-50';  
     if (porcentaje === 75) return 'cert-75';
+    if (porcentaje === 90) return 'cert-90';
     if (porcentaje === 100) return 'cert-100';
     return 'cert-none';
   }
@@ -128,7 +129,7 @@ export class Matriz {
   }
 
   private mapRow(r: any): { empleadoNumero: string; empleadoNombre: string; linea: string; operacion: string; porcentaje: number } {
-    const empleadoNumero = r?.number_employee || r?.numeroEmpleado || r?.employee_number || r?.user?.number_employee || '';
+    const empleadoNumero = r?.employee_number || r?.numeroEmpleado || r?.employee_number || r?.user?.employee_number || '';
     const empleadoNombre = r?.user?.name || r?.user?.nombre || r?.nombre || '';
 
     // Línea: objeto o string
