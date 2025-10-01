@@ -5,6 +5,7 @@ import { Certificar } from './components/certificar/certificar';
 import { Certificaciones } from './components/certificaciones/certificaciones';
 import { Matriz } from './components/matriz/matriz';
 import { Login } from './components/login/login';
+import { HeadCount } from './head-count/head-count';
 
 //=================[Configuración de Rutas]=========
 export const routes: Routes = [
@@ -32,6 +33,10 @@ export const routes: Routes = [
   {
     path: 'matriz-entrenamiento',
     component: Matriz
+  },
+  {
+    path: 'head-count',
+    component: HeadCount
   },
   {
     path: '**',

@@ -1,0 +1,475 @@
+<!--=================[Wrapper Principal]=========-->
+<div class="head-count-wrapper">
+  <div class="container py-4">
+    <!--=================[Header Section]=========-->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="header-card">
+          <div class="header-content">
+            <h2 class="header-title">
+              <i class="bi bi-people-fill me-2"></i>
+              GESTIÓN DE HEAD COUNT
+            </h2>
+            <div class="company-logo">
+              <span class="logo-text">GLOBAL SAFETY TEXTILES</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!--=================[Controles de Acción]=========-->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="action-card">
+          <div class="card-body">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-table me-2 text-primary"></i>
+                <span class="fw-bold">Total de empleados: {{ totalEmpleados() }}</span>
+              </div>
+              
+              <div class="d-flex flex-column flex-sm-row gap-2">
+                <button type="button" 
+                        class="btn btn-success btn-sm"
+                        (click)="abrirModalImportar()"
+                        [disabled]="cargandoDatos()">
+                  <i class="bi bi-upload me-1"></i>
+                  Importar Excel
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-primary btn-sm"
+                        (click)="abrirModalAgregar()"
+                        [disabled]="cargandoDatos()">
+                  <i class="bi bi-person-plus me-1"></i>
+                  Agregar Empleado
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-info btn-sm"
+                        (click)="cargarDatos()"
+                        [disabled]="cargandoDatos()">
+                  <i class="bi bi-arrow-clockwise me-1"></i>
+                  <span *ngIf="!cargandoDatos()">Actualizar</span>
+                  <span *ngIf="cargandoDatos()">Cargando...</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!--=================[Tabla de Head Count]=========-->
+    <div class="row">
+      <div class="col-12">
+        <div class="table-card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="bi bi-table me-2"></i>
+              Listado de Personal
+            </h5>
+          </div>
+          
+          <div class="card-body p-0">
+            <!--=================[Loading State]=========-->
+            <div *ngIf="cargandoDatos()" class="loading-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="spinner-border text-primary me-3" role="status"></div>
+                <span class="text-muted">Cargando head count...</span>
+              </div>
+            </div>
+
+            <!--=================[Tabla Moderna - Estilo Matriz]=========-->
+            <div *ngIf="!cargandoDatos()" class="modern-table-wrapper">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th class="col-emp-num">NO. EMPLEADO</th>
+                    <th class="col-emp-name">NOMBRE</th>
+                    <th class="col-classification d-none d-lg-table-cell">CLASIFICACIÓN</th>
+                    <th class="col-position">PUESTO</th>
+                    <th class="col-dept d-none d-md-table-cell">DEPARTAMENTO</th>
+                    <th class="col-area d-none d-xl-table-cell">ÁREA</th>
+                    <th class="col-date d-none d-lg-table-cell">FECHA INGRESO</th>
+                    <th class="col-role d-none d-md-table-cell">ROL</th>
+                    <th class="col-actions">ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!--=================[Filas de Datos]=========-->
+                  <tr *ngFor="let empleado of empleados(); let i = index" 
+                      class="table-row"
+                      [class.table-warning]="empleado.estado === 'inactivo'">
+                    
+                    <!-- Número de Empleado -->
+                    <td class="col-emp-num">
+                      <span class="badge bg-primary">{{ empleado.numeroEmpleado }}</span>
+                    </td>
+                    
+                    <!-- Nombre -->
+                    <td class="col-emp-name">
+                      <div class="employee-info">
+                        <div class="fw-bold text-primary">{{ empleado.nombre }}</div>
+                        <small class="text-muted d-md-none">
+                          {{ empleado.puesto }}
+                        </small>
+                      </div>
+                    </td>
+                    
+                    <!-- Clasificación -->
+                    <td class="col-classification d-none d-lg-table-cell">
+                      <span class="badge" 
+                            [class.bg-success]="empleado.clasificacion === 'Directo'"
+                            [class.bg-info]="empleado.clasificacion === 'Indirecto'"
+                            [class.bg-warning]="empleado.clasificacion === 'Temporal'">
+                        {{ empleado.clasificacion }}
+                      </span>
+                    </td>
+                    
+                    <!-- Puesto -->
+                    <td class="col-position">
+                      <div class="job-info">
+                        <div class="fw-medium">{{ empleado.puesto }}</div>
+                        <small class="text-muted d-lg-none">{{ empleado.clasificacion }}</small>
+                      </div>
+                    </td>
+                    
+                    <!-- Departamento -->
+                    <td class="col-dept d-none d-md-table-cell">
+                      <span class="text-dark">{{ empleado.departamento }}</span>
+                    </td>
+                    
+                    <!-- Área -->
+                    <td class="col-area d-none d-xl-table-cell">
+                      <span class="text-muted">{{ empleado.area }}</span>
+                    </td>
+                    
+                    <!-- Fecha de Ingreso -->
+                    <td class="col-date d-none d-lg-table-cell">
+                      <span class="text-muted">{{ empleado.fechaIngreso | date:'dd/MM/yyyy' }}</span>
+                    </td>
+                    
+                    <!-- Rol -->
+                    <td class="col-role d-none d-md-table-cell">
+                      <span class="badge" 
+                            [class.bg-primary]="empleado.rol === 'Administrador'"
+                            [class.bg-secondary]="empleado.rol === 'Supervisor'"
+                            [class.bg-light]="empleado.rol === 'Operario'"
+                            [class.text-dark]="empleado.rol === 'Operario'">
+                        {{ empleado.rol }}
+                      </span>
+                    </td>
+                    
+                    <!-- Acciones -->
+                    <td class="col-actions">
+                      <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" 
+                                class="btn btn-outline-primary btn-sm"
+                                (click)="editarEmpleado(empleado)"
+                                title="Editar empleado">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        
+                        <button type="button" 
+                                class="btn btn-outline-danger btn-sm"
+                                (click)="eliminarEmpleado(empleado)"
+                                title="Eliminar empleado">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  <!--=================[Estado Vacío]=========-->
+                  <tr *ngIf="empleados().length === 0">
+                    <td colspan="9" class="text-center py-5">
+                      <div class="empty-state">
+                        <i class="bi bi-people display-1 text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay empleados registrados</h5>
+                        <p class="text-muted">Comienza importando un archivo Excel o agregando empleados manualmente</p>
+                        <button type="button" 
+                                class="btn btn-primary"
+                                (click)="abrirModalImportar()">
+                          <i class="bi bi-upload me-1"></i>
+                          Importar Datos
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--=================[Modal Editar/Agregar Empleado]=========-->
+<div class="modal fade" 
+     id="modalEmpleado" 
+     tabindex="-1" 
+     aria-labelledby="modalEmpleadoLabel" 
+     aria-hidden="true"
+     data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalEmpleadoLabel">
+          <i class="bi bi-person-gear me-2"></i>
+          {{ modoEdicion() ? 'Editar Empleado' : 'Agregar Empleado' }}
+        </h5>
+        <button type="button" 
+                class="btn-close btn-close-white" 
+                (click)="cerrarModal()"
+                aria-label="Close"></button>
+      </div>
+      
+      <form [formGroup]="empleadoForm" (ngSubmit)="guardarEmpleado()">
+        <div class="modal-body">
+          <div class="row g-3">
+            <!-- Número de Empleado -->
+            <div class="col-md-6">
+              <label class="form-label required">Número de Empleado</label>
+              <input type="text" 
+                     class="form-control" 
+                     formControlName="numeroEmpleado"
+                     placeholder="Ej. 1234"
+                     maxlength="10">
+              <div class="invalid-feedback d-block"
+                   *ngIf="empleadoForm.get('numeroEmpleado')?.invalid && empleadoForm.get('numeroEmpleado')?.touched">
+                El número de empleado es requerido
+              </div>
+            </div>
+            
+            <!-- Nombre -->
+            <div class="col-md-6">
+              <label class="form-label required">Nombre Completo</label>
+              <input type="text" 
+                     class="form-control" 
+                     formControlName="nombre"
+                     placeholder="Nombre completo del empleado">
+              <div class="invalid-feedback d-block"
+                   *ngIf="empleadoForm.get('nombre')?.invalid && empleadoForm.get('nombre')?.touched">
+                El nombre es requerido
+              </div>
+            </div>
+            
+            <!-- Clasificación -->
+            <div class="col-md-6">
+              <label class="form-label required">Clasificación</label>
+              <select class="form-select" formControlName="clasificacion">
+                <option value="">Seleccionar clasificación</option>
+                <option value="Directo">Directo</option>
+                <option value="Indirecto">Indirecto</option>
+                <option value="Temporal">Temporal</option>
+              </select>
+              <div class="invalid-feedback d-block"
+                   *ngIf="empleadoForm.get('clasificacion')?.invalid && empleadoForm.get('clasificacion')?.touched">
+                La clasificación es requerida
+              </div>
+            </div>
+            
+            <!-- Puesto -->
+            <div class="col-md-6">
+              <label class="form-label required">Puesto</label>
+              <input type="text" 
+                     class="form-control" 
+                     formControlName="puesto"
+                     placeholder="Puesto de trabajo">
+              <div class="invalid-feedback d-block"
+                   *ngIf="empleadoForm.get('puesto')?.invalid && empleadoForm.get('puesto')?.touched">
+                El puesto es requerido
+              </div>
+            </div>
+            
+            <!-- Departamento -->
+            <div class="col-md-6">
+              <label class="form-label required">Departamento</label>
+              <input type="text" 
+                     class="form-control" 
+                     formControlName="departamento"
+                     placeholder="Departamento">
+              <div class="invalid-feedback d-block"
+                   *ngIf="empleadoForm.get('departamento')?.invalid && empleadoForm.get('departamento')?.touched">
+                El departamento es requerido
+              </div>
+            </div>
+            
+            <!-- Área -->
+            <div class="col-md-6">
+              <label class="form-label required">Área</label>
+              <input type="text" 
+                     class="form-control" 
+                     formControlName="area"
+                     placeholder="Área de trabajo">
+              <div class="invalid-feedback d-block"
+                   *ngIf="empleadoForm.get('area')?.invalid && empleadoForm.get('area')?.touched">
+                El área es requerida
+              </div>
+            </div>
+            
+            <!-- Fecha de Ingreso -->
+            <div class="col-md-6">
+              <label class="form-label required">Fecha de Ingreso</label>
+              <input type="date" 
+                     class="form-control" 
+                     formControlName="fechaIngreso">
+              <div class="invalid-feedback d-block"
+                   *ngIf="empleadoForm.get('fechaIngreso')?.invalid && empleadoForm.get('fechaIngreso')?.touched">
+                La fecha de ingreso es requerida
+              </div>
+            </div>
+            
+            <!-- Rol -->
+            <div class="col-md-6">
+              <label class="form-label required">Rol</label>
+              <select class="form-select" formControlName="rol">
+                <option value="">Seleccionar rol</option>
+                <option value="Administrador">Administrador</option>
+                <option value="Supervisor">Supervisor</option>
+                <option value="Operario">Operario</option>
+              </select>
+              <div class="invalid-feedback d-block"
+                   *ngIf="empleadoForm.get('rol')?.invalid && empleadoForm.get('rol')?.touched">
+                El rol es requerido
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" 
+                  class="btn btn-secondary" 
+                  (click)="cerrarModal()">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </button>
+          <button type="submit" 
+                  class="btn btn-primary"
+                  [disabled]="empleadoForm.invalid || guardandoEmpleado()">
+            <span *ngIf="guardandoEmpleado()" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!guardandoEmpleado()" class="bi bi-check-circle me-1"></i>
+            {{ guardandoEmpleado() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!--=================[Modal Importar Excel]=========-->
+<div class="modal fade" 
+     id="modalImportar" 
+     tabindex="-1" 
+     aria-labelledby="modalImportarLabel" 
+     aria-hidden="true"
+     data-bs-backdrop="static">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="modalImportarLabel">
+          <i class="bi bi-upload me-2"></i>
+          Importar Head Count
+        </h5>
+        <button type="button" 
+                class="btn-close btn-close-white" 
+                (click)="cerrarModalImportar()"
+                aria-label="Close"></button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="upload-area" 
+             [class.dragging]="dragging()"
+             (dragover)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event)">
+          
+          <div class="text-center">
+            <i class="bi bi-cloud-upload display-1 text-success mb-3"></i>
+            <h5>Selecciona o arrastra tu archivo Excel</h5>
+            <p class="text-muted mb-3">
+              Formato soportado: .xlsx, .xls<br>
+              <small>Máximo 10MB</small>
+            </p>
+            
+            <input type="file" 
+                   class="d-none" 
+                   #fileInput
+                   accept=".xlsx,.xls"
+                   (change)="onFileSelected($event)">
+            
+            <button type="button" 
+                    class="btn btn-success"
+                    (click)="fileInput.click()">
+              <i class="bi bi-folder me-1"></i>
+              Seleccionar Archivo
+            </button>
+          </div>
+          
+          <div *ngIf="archivoSeleccionado()" class="mt-3">
+            <div class="alert alert-info d-flex align-items-center">
+              <i class="bi bi-file-earmark-excel me-2"></i>
+              <div>
+                <strong>{{ archivoSeleccionado()?.name }}</strong><br>
+                <small>{{ (archivoSeleccionado()?.size || 0) / 1024 / 1024 | number:'1.2-2' }} MB</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-3">
+          <h6>Formato esperado del Excel:</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th>No. Empleado</th>
+                  <th>Nombre</th>
+                  <th>Clasificación</th>
+                  <th>Puesto</th>
+                  <th>Departamento</th>
+                  <th>Área</th>
+                  <th>Fecha Ingreso</th>
+                  <th>Rol</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="text-muted">
+                  <td>1234</td>
+                  <td>Juan Pérez</td>
+                  <td>Directo</td>
+                  <td>Operario</td>
+                  <td>Producción</td>
+                  <td>Área A</td>
+                  <td>01/01/2023</td>
+                  <td>Operario</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" 
+                class="btn btn-secondary" 
+                (click)="cerrarModalImportar()">
+          <i class="bi bi-x-circle me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" 
+                class="btn btn-success"
+                [disabled]="!archivoSeleccionado() || importandoArchivo()"
+                (click)="importarArchivo()">
+          <span *ngIf="importandoArchivo()" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="!importandoArchivo()" class="bi bi-upload me-1"></i>
+          {{ importandoArchivo() ? 'Importando...' : 'Importar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

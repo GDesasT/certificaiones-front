@@ -33,6 +33,7 @@ export class Navbar {
     { name: 'Certificar Personas', route: '/certificar', icon: 'bi-award-fill' },
     { name: 'Ver Certificaciones', route: '/certificaciones', icon: 'bi-search' },
     { name: 'Matriz de Entrenamiento', route: '/matriz-entrenamiento', icon: 'bi-table' },
+    { name: 'Head Count', route: '/head-count', icon: 'bi-people-fill' },
     { 
       name: 'Cerrar Sesión', 
       icon: 'bi-box-arrow-right',
