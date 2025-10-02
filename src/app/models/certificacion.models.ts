@@ -1,6 +1,6 @@
 //=================[Tipos Base]=========
 export type EstadoCertificacion = 'Activa' | 'Actualizada' | 'Vencida' | 'Suspendida';
-export type PorcentajeCertificacion = 25 | 50 | 75 | 100;
+export type PorcentajeCertificacion = 25 | 50 | 75 | 90 | 100;
 
 //=================[Interfaces Principales]=========
 export interface EmpleadoBase {

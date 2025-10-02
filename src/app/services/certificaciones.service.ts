@@ -33,7 +33,7 @@ export class CertificacionesService {
     return request$;
   }
 
-  private extractArrayFromResponse<T>(response: any, arrayKeys: string[] = ['data', 'items', 'rows', 'result', 'results']): T[] {
+  private extractArrayFromResponse<T>(response: any, arrayKeys: string[] = ['usuarios','data', 'items', 'rows', 'result', 'results']): T[] {
     const candidates = arrayKeys.map(key => response?.[key]).concat([response]);
     const firstArray = candidates.find(x => Array.isArray(x));
     return (firstArray as T[]) ?? [];
@@ -100,15 +100,26 @@ export class CertificacionesService {
 
   getAllUsers() {
     return this.getCachedData('users', () =>
-      this.http.get<{ users: any[] }>(`${this.base}/users`)
+      this.http.get<any>(`${this.base}/users`, { params: { all: 'true' } })
         .pipe(
           map(r => {
-            const users = this.extractArrayFromResponse(r, ['users']);
+            const users = this.extractArrayFromResponse(r, ['usuarios','users']);
             return users.map((user: any) => ({
-              employee_number: user.employee_number || '',
+              employee_number: user.employee_number || user.number_employee || '',
               name: user.name || ''
             }));
           })
+        )
+    );
+  }
+
+  // Usuarios detallados (sin normalizar) para Head Count
+  getUsersDetailed() {
+    return this.getCachedData('users_detailed', () =>
+      this.http.get<any>(`${this.base}/users`, { params: { all: 'true' } })
+        .pipe(
+          map(r => this.extractArrayFromResponse(r, ['usuarios','users'])),
+          catchError(this.handleError)
         )
     );
   }
@@ -155,6 +166,39 @@ export class CertificacionesService {
         map(r => this.extractArrayFromResponse(r, ['certificaciones', 'certifiers', 'data', 'items', 'rows', 'result', 'results'])),
         catchError(this.handleError)
       );
+  }
+
+  //=================[Aprobaciones]=========
+  listCertifiers(params: Record<string, any> = {}) {
+    return this.http.get<any>(`${this.base}/certifiers`, { params })
+      .pipe(catchError(this.handleError));
+  }
+  getCertifierById(id: number) {
+    return this.http.get<any>(`${this.base}/certifiers/${id}`)
+      .pipe(catchError(this.handleError));
+  }
+  listPendingByRole(role: 'mantenimiento'|'produccion'|'calidad', params: Record<string, any> = {}) {
+    return this.http.get<any>(`${this.base}/certifiers/pending`, { params: { role, ...params } })
+      .pipe(catchError(this.handleError));
+  }
+  approveCertifier(body: { certificacion_id: number; approver_number?: string; approver_qr?: string; approver_role: string; source?: string; notes?: string; }) {
+    return this.http.post<any>(`${this.base}/certifiers/approve`, body)
+      .pipe(catchError(this.handleError));
+  }
+  revokeApproval(body: { certificacion_id: number; approver_role: string; }) {
+    return this.http.post<any>(`${this.base}/certifiers/revoke`, body)
+      .pipe(catchError(this.handleError));
+  }
+
+  //=================[Resolver Aprobador (QR/Número)]=========
+  resolveApprover(params: { code: string; approver_role?: string; certificacion_id?: number | string; }) {
+    const httpParams = new HttpParams({ fromObject: {
+      code: params.code,
+      ...(params.approver_role ? { approver_role: params.approver_role } : {}),
+      ...(params.certificacion_id ? { certificacion_id: String(params.certificacion_id) } : {})
+    }});
+    return this.http.get<any>(`${this.base}/certifiers/resolve-approver`, { params: httpParams })
+      .pipe(catchError(this.handleError));
   }
 
   //=================[Cache Management]=========

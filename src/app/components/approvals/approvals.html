@@ -1,0 +1,159 @@
+<div class="approvals-wrapper">
+  <div class="container py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="header-card">
+          <div class="header-content">
+            <h2 class="header-title">
+              <i class="bi bi-qr-code-scan me-2"></i>
+              APROBACIONES DE CERTIFICACIONES
+            </h2>
+            <div class="company-logo">
+              <span class="logo-text">GLOBAL SAFETY TEXTILES</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selector de Rol con Pills -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="controls-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <!-- Role Pills -->
+              <div class="role-selector">
+                <h6 class="mb-3">
+                  <i class="bi bi-person-badge me-2"></i>
+                  Selecciona tu rol de aprobación:
+                </h6>
+                <div class="role-pills">
+                  @for (r of roles; track r) {
+                    <button 
+                      type="button"
+                      class="role-pill"
+                      [class.active]="filtroForm.value.role === r"
+                      (click)="filtroForm.patchValue({role: r})"
+                    >
+                      <i class="bi bi-shield-check me-2"></i>
+                      {{ r | titlecase }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="action-buttons">
+                <button 
+                  type="button" 
+                  class="btn btn-scan" 
+                  (click)="showScanner.set(true)" 
+                  [disabled]="loading()"
+                >
+                  <i class="bi bi-qr-code-scan me-2"></i>
+                  Escanear QR
+                </button>
+                <button 
+                  type="button" 
+                  class="btn btn-refresh" 
+                  (click)="cargar()" 
+                  [disabled]="loading()"
+                >
+                  <i class="bi bi-arrow-clockwise me-2"></i>
+                  Refrescar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Scanner -->
+    @if (showScanner()) {
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="scanner-card">
+            <div class="card-body">
+              <app-qr-scanner (scanned)="onScan($event)" (closed)="showScanner.set(false)"></app-qr-scanner>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Tabla de Pendientes -->
+    <div class="row">
+      <div class="col-12">
+        <div class="table-card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="bi bi-clipboard-check me-2"></i>
+              Certificaciones Pendientes - {{ filtroForm.value.role | titlecase }}
+              @if (loading()) {
+                <span class="spinner-border spinner-border-sm ms-2" role="status"></span>
+              }
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="modern-table-wrapper">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th class="col-id">ID</th>
+                    <th class="col-employee">Empleado</th>
+                    <th class="col-operation">Operación</th>
+                    <th class="col-percent">Porcentaje</th>
+                    <th class="col-status">Estado</th>
+                    <th class="col-action">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of pending(); track c.id) {
+                    <tr class="table-row">
+                      <td class="col-id">
+                        <span class="badge-id">{{ c.id }}</span>
+                      </td>
+                      <td class="col-employee">
+                        <div class="employee-info">
+                          <span class="employee-name">{{ c.user?.name }}</span>
+                          <small class="employee-number">#{{ c.user?.employee_number || c.user?.number_employee }}</small>
+                        </div>
+                      </td>
+                      <td class="col-operation">{{ c.operation?.name }}</td>
+                      <td class="col-percent">
+                        <span class="badge-percent">{{ c.porcentaje }}%</span>
+                      </td>
+                      <td class="col-status">
+                        <span class="badge-status">{{ c.estado }}</span>
+                      </td>
+                      <td class="col-action">
+                        <button 
+                          class="btn-approve" 
+                          (click)="aprobar(c)" 
+                          [disabled]="!filtroForm.value.approver_number"
+                        >
+                          <i class="bi bi-pen-fill me-2"></i>
+                          Firmar
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="6" class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <span>No hay certificaciones pendientes para este rol</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

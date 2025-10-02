@@ -19,7 +19,7 @@ interface Catalogo { id: number; nombre?: string; name?: string; }
 export class Certificar implements OnInit {
   // Estado consolidado - eliminando aliases innecesarios
   private readonly empleadoActual = signal<{ numero: string; nombre: string | null } | null>(null);
-  private readonly modalAbierto = signal<number | null>(null);
+  // Estado del modal activo (porcentaje seleccionado)
   private readonly cargandoGuardado = signal(false);
   private readonly buscandoEmpleado = signal(false);
   private readonly cargandoCache = signal(true);
@@ -280,6 +280,7 @@ export class Certificar implements OnInit {
       25: mapIt(COMPETENCIAS_25_MOCK),
       50: mapIt(COMPETENCIAS_50_MOCK),
       75: mapIt(COMPETENCIAS_75_MOCK),
+      90: [],
       100: mapIt(COMPETENCIAS_100_MOCK)
     };
   }
@@ -335,14 +336,14 @@ export class Certificar implements OnInit {
       Swal.fire({ icon: 'warning', title: 'Nivel menor no permitido', text: `El empleado ya tiene ${actual}%. Solo puedes aumentar.` });
       return;
     }
-    this.modalAbierto.set(p);
+  this.modalActivo.set(p);
     const comps = this.competenciasPorPorcentaje[p] ?? [];
     const current = this.competenciasSeleccionadas();
     const next = { ...current };
     comps.forEach(c => { if (!(c.id in next)) next[c.id] = false; });
     this.competenciasSeleccionadas.set(next);
   }
-  cerrarModal() { this.modalAbierto.set(null); }
+  cerrarModal() { this.modalActivo.set(null); }
   toggleCompetencia(id: string) {
     const a = this.competenciasSeleccionadas();
     this.competenciasSeleccionadas.set({ ...a, [id]: !a[id] });

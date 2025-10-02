@@ -1,0 +1,163 @@
+<div class="container py-4">
+  <div class="card p-3 mb-3">
+    <div class="nav nav-pills gap-2">
+      <button class="btn btn-outline-primary" [class.active]="tab()==='users'" (click)="setTab('users')">Usuarios</button>
+      <button class="btn btn-outline-primary" [class.active]="tab()==='areas'" (click)="setTab('areas')">Áreas</button>
+      <button class="btn btn-outline-primary" [class.active]="tab()==='lines'" (click)="setTab('lines')">Líneas</button>
+      <button class="btn btn-outline-primary" [class.active]="tab()==='programs'" (click)="setTab('programs')">Programas</button>
+      <button class="btn btn-outline-primary" [class.active]="tab()==='operations'" (click)="setTab('operations')">Operaciones</button>
+      <button class="btn btn-outline-primary" [class.active]="tab()==='scopes'" (click)="setTab('scopes')">Approval Scopes</button>
+    </div>
+  </div>
+
+  <!-- Usuarios -->
+  <div *ngIf="tab()==='users'" class="card p-3">
+    <h5 class="mb-3">Crear usuario</h5>
+    <form [formGroup]="newUserForm" class="row g-2">
+      <div class="col-md-2"><input class="form-control" placeholder="No. Empleado" formControlName="employee_number"></div>
+      <div class="col-md-3"><input class="form-control" placeholder="Nombre" formControlName="name"></div>
+      <div class="col-md-2"><input class="form-control" placeholder="Clasificación" formControlName="classification"></div>
+      <div class="col-md-2"><input class="form-control" placeholder="Puesto" formControlName="position"></div>
+      <div class="col-md-2"><input class="form-control" placeholder="Departamento" formControlName="department"></div>
+      <div class="col-md-2"><input class="form-control" placeholder="Área" formControlName="area"></div>
+      <div class="col-md-2"><input type="date" class="form-control" placeholder="Fecha ingreso" formControlName="hire_date"></div>
+      <div class="col-md-2">
+        <select class="form-select" formControlName="role_id">
+          <option [ngValue]="''">Rol...</option>
+          <option *ngFor="let r of roles" [value]="r.id">{{ r.name || r.nombre }}</option>
+        </select>
+      </div>
+      <div class="col-md-2"><input type="password" class="form-control" placeholder="Password (opcional)" formControlName="password"></div>
+      <div class="col-12">
+        <button type="button" class="btn btn-primary px-4" (click)="createUser()" [disabled]="newUserForm.invalid">Crear</button>
+      </div>
+    </form>
+    <hr>
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead><tr><th>ID</th><th>No. Empleado</th><th>Nombre</th><th>Clasificación</th><th>Puesto</th><th>Depto</th><th>Área</th><th>Ingreso</th><th>Rol</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let u of users">
+            <td>{{u.id}}</td>
+            <td>{{u.employee_number || u.number_employee}}</td>
+            <td>{{u.name}}</td>
+            <td>{{u.classification}}</td>
+            <td>{{u.position}}</td>
+            <td>{{u.department}}</td>
+            <td>{{u.area}}</td>
+            <td>{{u.hire_date | date:'yyyy-MM-dd'}}</td>
+            <td>{{u.role?.name || u.role_name}}</td>
+          </tr>
+          <tr *ngIf="!users.length"><td colspan="9" class="text-center text-muted">Sin usuarios</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Áreas -->
+  <div *ngIf="tab()==='areas'" class="card p-3">
+    <h5 class="mb-3">Crear área</h5>
+    <form [formGroup]="newAreaForm" class="row g-2">
+      <div class="col-md-4"><input class="form-control" placeholder="Nombre" formControlName="name"></div>
+      <div class="col-md-4"><input class="form-control" placeholder="Descripción" formControlName="description"></div>
+      <div class="col-12"><button type="button" class="btn btn-primary" (click)="createArea()" [disabled]="newAreaForm.invalid">Crear</button></div>
+    </form>
+    <ul class="list-group mt-3">
+      <li *ngFor="let a of areas" class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{{a.name}} <small class="text-muted">{{a.description}}</small></span>
+      </li>
+      <li *ngIf="!areas.length" class="list-group-item text-muted">Sin áreas</li>
+    </ul>
+  </div>
+
+  <!-- Líneas -->
+  <div *ngIf="tab()==='lines'" class="card p-3">
+    <h5 class="mb-3">Crear línea</h5>
+    <form [formGroup]="newLineForm" class="row g-2">
+      <div class="col-md-3"><input class="form-control" placeholder="Nombre" formControlName="name"></div>
+      <div class="col-md-3"><input class="form-control" placeholder="Descripción" formControlName="description"></div>
+      <div class="col-md-3">
+        <select class="form-select" formControlName="area_id">
+          <option [ngValue]="''">Área...</option>
+          <option *ngFor="let a of areas" [value]="a.id">{{ a.name }}</option>
+        </select>
+      </div>
+      <div class="col-12"><button type="button" class="btn btn-primary" (click)="createLine()" [disabled]="newLineForm.invalid">Crear</button></div>
+    </form>
+    <div class="table-responsive mt-3">
+      <table class="table table-hover">
+        <thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Área</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let l of lines"><td>{{l.id}}</td><td>{{l.name}}</td><td>{{l.description}}</td><td>{{l.area?.name}}</td></tr>
+          <tr *ngIf="!lines.length"><td colspan="4" class="text-center text-muted">Sin líneas</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Programas -->
+  <div *ngIf="tab()==='programs'" class="card p-3">
+    <h5 class="mb-3">Crear programa</h5>
+    <form [formGroup]="newProgramForm" class="row g-2">
+      <div class="col-md-3"><input class="form-control" placeholder="Nombre" formControlName="name"></div>
+      <div class="col-md-3"><input class="form-control" placeholder="Descripción" formControlName="description"></div>
+      <div class="col-md-3">
+        <select class="form-select" formControlName="line_id">
+          <option [ngValue]="''">Línea...</option>
+          <option *ngFor="let l of lines" [value]="l.id">{{ l.name }}</option>
+        </select>
+      </div>
+      <div class="col-12"><button type="button" class="btn btn-primary" (click)="createProgram()" [disabled]="newProgramForm.invalid">Crear</button></div>
+    </form>
+    <div class="table-responsive mt-3">
+      <table class="table table-hover">
+        <thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Línea</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let p of programs"><td>{{p.id}}</td><td>{{p.name}}</td><td>{{p.description}}</td><td>{{p.line?.name}}</td></tr>
+          <tr *ngIf="!programs.length"><td colspan="4" class="text-center text-muted">Sin programas</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Operaciones -->
+  <div *ngIf="tab()==='operations'" class="card p-3">
+    <h5 class="mb-3">Crear operación</h5>
+    <form [formGroup]="newOperationForm" class="row g-2">
+      <div class="col-md-2"><input class="form-control" placeholder="# Operación" formControlName="number_operation"></div>
+      <div class="col-md-3"><input class="form-control" placeholder="Nombre" formControlName="name"></div>
+      <div class="col-md-3"><input class="form-control" placeholder="Descripción" formControlName="description"></div>
+      <div class="col-md-3">
+        <select class="form-select" formControlName="programa_id">
+          <option [ngValue]="''">Programa...</option>
+          <option *ngFor="let p of programs" [value]="p.id">{{ p.name }}</option>
+        </select>
+      </div>
+      <div class="col-12"><button type="button" class="btn btn-primary" (click)="createOperation()" [disabled]="newOperationForm.invalid">Crear</button></div>
+    </form>
+    <div class="table-responsive mt-3">
+      <table class="table table-hover">
+        <thead><tr><th>ID</th><th># Operación</th><th>Nombre</th><th>Descripción</th><th>Programa</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let o of operations"><td>{{o.id}}</td><td>{{o.number_operation || o.code}}</td><td>{{o.name}}</td><td>{{o.description}}</td><td>{{o.program?.name}}</td></tr>
+          <tr *ngIf="!operations.length"><td colspan="5" class="text-center text-muted">Sin operaciones</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Approval Scopes -->
+  <div *ngIf="tab()==='scopes'" class="card p-3">
+    <h5 class="mb-3">Crear approval scope</h5>
+    <form [formGroup]="newScopeForm" class="row g-2">
+      <div class="col-md-4"><input class="form-control" placeholder="Nombre" formControlName="name"></div>
+      <div class="col-12"><button type="button" class="btn btn-primary" (click)="createScope()" [disabled]="newScopeForm.invalid">Crear</button></div>
+    </form>
+    <ul class="list-group mt-3">
+      <li *ngFor="let s of scopes" class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{{s.name}}</span>
+      </li>
+      <li *ngIf="!scopes.length" class="list-group-item text-muted">Sin scopes</li>
+    </ul>
+  </div>
+</div>

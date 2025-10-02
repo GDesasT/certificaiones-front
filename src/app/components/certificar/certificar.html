@@ -34,36 +34,44 @@
                   <label class="form-label required">No. Empleado</label>
                   <input type="text" class="form-control" formControlName="numeroEmpleado"
                          placeholder="Ej. 1234" maxlength="4" (input)="onNumeroEmpleadoInput($event)">
-                  <div class="invalid-feedback d-block"
-                       *ngIf="certificacionForm.get('numeroEmpleado')?.invalid && certificacionForm.get('numeroEmpleado')?.touched">
+                  <div class="invalid-feedback d-block">
+                    @if (certificacionForm.get('numeroEmpleado')?.invalid && certificacionForm.get('numeroEmpleado')?.touched) {
                     Ingrese un número de empleado válido (4 dígitos)
+                    }
                   </div>
-                  <small class="text-success" *ngIf="cacheReady()">
+                  @if (cacheReady()) {
+                  <small class="text-success">
                     <i class="bi bi-lightning-fill"></i> Búsqueda instantánea
                   </small>
-                  <small class="text-warning" *ngIf="!cacheReady()">
+                  }
+                  @if (!cacheReady()) {
+                  <small class="text-warning">
                     <i class="bi bi-hourglass-split"></i> Cargando cache...
                   </small>
+                  }
                 </div>
                 <div class="col-md-5">
                   <label class="form-label">Nombre</label>
                   <div class="input-group">
                     <input type="text" class="form-control auto-filled" formControlName="nombre"
                            placeholder="El nombre se llenará automáticamente" readonly>
-                    <span class="input-group-text" *ngIf="buscando()">
+                    @if (buscando()) {
+                    <span class="input-group-text">
                       <div class="spinner-border spinner-border-sm" role="status">
                         <span class="visually-hidden">Buscando...</span>
                       </div>
                     </span>
+                    }
                   </div>
-                  <small class="text-muted" *ngIf="buscando()">Buscando empleado...</small>
+                  @if (buscando()) { <small class="text-muted">Buscando empleado...</small> }
                 </div>
                 <div class="col-md-4">
                   <label class="form-label required">No. Empleado Entrenador</label>
                   <input type="text" class="form-control" formControlName="trainerNumber" placeholder="Ej. 5678" maxlength="4" (input)="onTrainerNumberInput($event)">
-                  <div class="invalid-feedback d-block"
-                       *ngIf="certificacionForm.get('trainerNumber')?.invalid && certificacionForm.get('trainerNumber')?.touched">
+                  <div class="invalid-feedback d-block">
+                    @if (certificacionForm.get('trainerNumber')?.invalid && certificacionForm.get('trainerNumber')?.touched) {
                     Ingrese el número de empleado del entrenador (4 dígitos)
+                    }
                   </div>
                 </div>
               </div>
@@ -77,9 +85,8 @@
           <option [value]="ar.id">{{ ar.nombre ?? ar.name ?? ('#' + ar.id) }}</option>
         }
       </select>
-      <div class="invalid-feedback d-block"
-           *ngIf="certificacionForm.get('areaId')?.invalid && certificacionForm.get('areaId')?.touched">
-        Debe seleccionar un área
+      <div class="invalid-feedback d-block">
+        @if (certificacionForm.get('areaId')?.invalid && certificacionForm.get('areaId')?.touched) { Debe seleccionar un área }
       </div>
     </div>
 
@@ -92,9 +99,8 @@
           <option [value]="ln.id">{{ ln.nombre ?? ln.name ?? ('#' + ln.id) }}</option>
         }
       </select>
-      <div class="invalid-feedback d-block"
-           *ngIf="certificacionForm.get('lineaId')?.invalid && certificacionForm.get('lineaId')?.touched">
-        Debe seleccionar una línea
+      <div class="invalid-feedback d-block">
+        @if (certificacionForm.get('lineaId')?.invalid && certificacionForm.get('lineaId')?.touched) { Debe seleccionar una línea }
       </div>
     </div>
 
@@ -107,9 +113,8 @@
           <option [value]="pr.id">{{ pr.nombre ?? pr.name ?? ('#' + pr.id) }}</option>
         }
       </select>
-      <div class="invalid-feedback d-block"
-           *ngIf="certificacionForm.get('programaId')?.invalid && certificacionForm.get('programaId')?.touched">
-        Debe seleccionar un programa
+      <div class="invalid-feedback d-block">
+        @if (certificacionForm.get('programaId')?.invalid && certificacionForm.get('programaId')?.touched) { Debe seleccionar un programa }
       </div>
     </div>
 
@@ -122,9 +127,8 @@
           <option [value]="op.id">{{ op.nombre ?? op.name ?? ('#' + op.id) }}</option>
         }
       </select>
-      <div class="invalid-feedback d-block"
-           *ngIf="certificacionForm.get('operacionId')?.invalid && certificacionForm.get('operacionId')?.touched">
-        Debe seleccionar una operación
+      <div class="invalid-feedback d-block">
+        @if (certificacionForm.get('operacionId')?.invalid && certificacionForm.get('operacionId')?.touched) { Debe seleccionar una operación }
       </div>
     </div>
   </div>
@@ -192,6 +196,16 @@
                           (click)="abrirModal(75)">
                     <div class="cert-percentage">75%</div>
                     <div class="cert-label">Nivel Avanzado</div>
+                    <i class="bi bi-chevron-right"></i>
+                  </button>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-3">
+                  <button type="button" class="cert-button cert-90"
+                          [class.disabled]="!puedeIniciarCertificacion"
+                          [disabled]="!puedeIniciarCertificacion || guardando()"
+                          (click)="abrirModal(90)">
+                    <div class="cert-percentage">90%</div>
+                    <div class="cert-label">Pre-Entrenamiento</div>
                     <i class="bi bi-chevron-right"></i>
                   </button>
                 </div>

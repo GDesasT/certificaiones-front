@@ -6,6 +6,10 @@ import { Certificaciones } from './components/certificaciones/certificaciones';
 import { Matriz } from './components/matriz/matriz';
 import { Login } from './components/login/login';
 import { HeadCount } from './head-count/head-count';
+import { roleGuard } from './core/auth/role.guard';
+import { Unauthorized } from './components/unauthorized/unauthorized';
+import { DevPanel } from './components/dev-panel/dev-panel';
+import { Approvals } from './components/approvals/approvals';
 
 //=================[Configuración de Rutas]=========
 export const routes: Routes = [
@@ -20,23 +24,49 @@ export const routes: Routes = [
   },
   {
     path: 'home',
-    component: Home
+    component: Home,
+    canActivate: [roleGuard],
+    data: { allowedRoles: ['admin','dev','trainer','mantenimiento','produccion','calidad','employee'] }
   },
   {
     path: 'certificar',
-    component: Certificar
+    component: Certificar,
+    canActivate: [roleGuard],
+    data: { allowedRoles: ['admin','dev','trainer'] }
   },
   {
     path: 'certificaciones',
-    component: Certificaciones
+    component: Certificaciones,
+    canActivate: [roleGuard],
+    data: { allowedRoles: ['admin','dev','trainer','mantenimiento','produccion','calidad','employee'] }
   },
   {
     path: 'matriz-entrenamiento',
-    component: Matriz
+    component: Matriz,
+    canActivate: [roleGuard],
+    data: { allowedRoles: ['admin','dev', 'trainer', 'mantenimiento', 'produccion', 'calidad', 'employee'] }
+  },
+  {
+    path: 'dev',
+    component: DevPanel,
+    canActivate: [roleGuard],
+    data: { allowedRoles: ['dev'] }
+  },
+  {
+    path: 'unauthorized',
+    component: Unauthorized
   },
   {
     path: 'head-count',
-    component: HeadCount
+    component: HeadCount,
+    canActivate: [roleGuard],
+    data: { allowedRoles: ['dev', 'admin'] }
+  },
+  {
+    path: 'aprobaciones',
+    component: Approvals,
+    canActivate: [roleGuard],
+    data: { allowedRoles: ['admin','dev','mantenimiento','produccion','calidad'] }
   },
   {
     path: '**',

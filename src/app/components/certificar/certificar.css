@@ -228,6 +228,14 @@
   background: rgba(249, 115, 22, 0.05);
 }
 
+.cert-90 {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+.cert-90:hover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
 .cert-100 {
   border-color: rgba(168, 85, 247, 0.3);
 }
@@ -246,6 +254,7 @@
 .cert-25 .cert-percentage { color: #22c55e; }
 .cert-50 .cert-percentage { color: #eab308; }
 .cert-75 .cert-percentage { color: #f97316; }
+.cert-90 .cert-percentage { color: #3b82f6; }
 .cert-100 .cert-percentage { color: #a855f7; }
 
 .cert-label {

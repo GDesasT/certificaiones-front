@@ -11,7 +11,11 @@ interface EmpleadoTemp {
   nombre: string;
 }
 
-interface CertificacionHistorialExt extends CertificacionHistorial { area?: string }
+interface CertificacionHistorialExt extends CertificacionHistorial { 
+  area?: string;
+  firmas?: { role: string; by?: string; date?: string }[];
+  requeridas?: string[];
+}
 
 //=================[Componente Certificaciones]=========
 @Component({
@@ -242,6 +246,35 @@ export class Certificaciones implements OnInit {
   }
 
   private mapRowToCert(r: any): CertificacionHistorialExt {
+    // Normalizar firmas y requeridas del backend
+    const normalizeRole = (x: any): string | null => {
+      if (!x) return null;
+      const cand = x.role 
+        || x.rol 
+        || x.name 
+        || x.nombre 
+        || x.scope 
+        || x.tipo 
+        || x.tipo_aprobacion 
+        || x?.approverRole?.name 
+        || x?.approver_role?.name;
+      return typeof cand === 'string' ? cand.toLowerCase() : null;
+    };
+    const approverDisplay = (a: any): string => {
+      const name = a?.approver?.name || a?.name || a?.approved_by || a?.aprobado_por || a?.user_name || '';
+      const num = a?.approver?.employee_number || a?.employee_number || '';
+      return num ? `${name} (${num})` : String(name || '');
+    };
+    const firmasArr: any[] = (r?.aprobaciones || r?.approvals || r?.firmas || r?.signatures || []) as any[];
+    const requeridasArr: any[] = (r?.required_roles || r?.required_approvals || r?.required_signatures || r?.approval_scopes || []) as any[];
+    const firmas = firmasArr.map(a => ({
+      role: normalizeRole(a) || '',
+      by: approverDisplay(a),
+      date: a.approved_at || a.date || a.fecha || a.created_at
+    })).filter(f => !!f.role);
+    let requeridas = requeridasArr.map(normalizeRole).filter(Boolean) as string[];
+    if (requeridas.length === 0) requeridas = ['mantenimiento','produccion','calidad'];
+
     return {
       id: this.extractId(r),
       numeroEmpleado: String(r.employee_number ?? r.numeroEmpleado ?? r.employee_number ?? ''),
@@ -253,7 +286,9 @@ export class Certificaciones implements OnInit {
       porcentajeCertificacion: Number(r.porcentaje ?? r.porcentajeCertificacion ?? r.percent ?? 0) as PorcentajeCertificacion,
       fechaCertificacion: new Date(r.fecha_certificacion ?? r.fechaCertificacion ?? r.created_at ?? Date.now()),
       entrenador: this.extractEntrenador(r),
-      estado: 'Activa'
+      estado: 'Activa',
+      firmas,
+      requeridas
     };
   }
 
@@ -394,5 +429,19 @@ export class Certificaciones implements OnInit {
   // Optimized method for counting certifications by line
   contarCertificacionesPorLinea(linea: string): number {
     return this.certificacionesEmpleado().filter(c => c.linea === linea).length;
+  }
+
+  // Helpers para mostrar firmas por rol en el template
+  readonly firmaRoles: string[] = ['mantenimiento','produccion','calidad'];
+  hasRole(firmas: { role: string }[] | undefined | null, rol: string): boolean {
+    if (!firmas || !rol) return false;
+    const r = rol.toLowerCase();
+    return firmas.some(f => (f.role || '').toLowerCase() === r);
+  }
+  signerName(firmas: { role: string; by?: string }[] | undefined | null, rol: string): string {
+    if (!firmas || !rol) return '';
+    const r = rol.toLowerCase();
+    const hit = firmas.find(f => (f.role || '').toLowerCase() === r);
+    return (hit?.by || '').toString();
   }
 }

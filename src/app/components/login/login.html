@@ -17,24 +17,24 @@
 
       <!--=================[Formulario de Login]=========-->
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-        <!--=================[Campo Usuario]=========-->
+        <!--=================[Campo Identificador]=========-->
         <div class="form-group">
-          <label for="username" class="form-label">
+          <label for="identifier" class="form-label">
             <i class="bi bi-person-fill me-2"></i>
-            Usuario
+            Número de empleado o correo
           </label>
           <input
             type="text"
-            id="username"
-            formControlName="username"
+            id="identifier"
+            formControlName="identifier"
             class="form-control"
-            [class.is-invalid]="isFieldInvalid('username')"
-            placeholder="Ingresa tu usuario"
+            [class.is-invalid]="isFieldInvalid('identifier')"
+            placeholder="Ingresa tu número de empleado o correo"
             autocomplete="username"
           >
-          @if (isFieldInvalid('username')) {
+          @if (isFieldInvalid('identifier')) {
             <div class="invalid-feedback">
-              {{ getFieldError('username') }}
+              {{ getFieldError('identifier') }}
             </div>
           }
         </div>

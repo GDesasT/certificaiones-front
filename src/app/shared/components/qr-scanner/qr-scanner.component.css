@@ -1,0 +1,345 @@
+/*=================[QR Scanner Container]=========*/
+.qr-scanner {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(30, 58, 138, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+/*=================[Scanner Header]=========*/
+.scanner-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.1);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.header-icon i {
+  font-size: 1.75rem;
+  color: white;
+}
+
+.header-text h4 {
+  color: #1e3a8a;
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.header-text p {
+  color: #64748b;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/*=================[Toolbar]=========*/
+.qr-toolbar {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.toolbar-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.toolbar-label {
+  font-weight: 600;
+  color: #1e40af;
+  font-size: 0.9rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.camera-select {
+  flex: 1;
+  min-width: 200px;
+  border: 2px solid #e1f5fe;
+  border-radius: 10px;
+  padding: 0.625rem 1rem;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+
+.camera-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+  background-color: white;
+}
+
+/*=================[Video Container]=========*/
+.qr-video-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.qr-video-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 4/3;
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(30, 58, 138, 0.25);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.qr-video-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/*=================[Scan Frame]=========*/
+.scan-frame {
+  position: absolute;
+  inset: 15%;
+  border: 2px solid rgba(59, 130, 246, 0.5);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #3b82f6;
+  border-radius: 4px;
+}
+
+.corner-tl {
+  top: -3px;
+  left: -3px;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: -2px -2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.corner-tr {
+  top: -3px;
+  right: -3px;
+  border-left: none;
+  border-bottom: none;
+  box-shadow: 2px -2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.corner-bl {
+  bottom: -3px;
+  left: -3px;
+  border-right: none;
+  border-top: none;
+  box-shadow: -2px 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.corner-br {
+  bottom: -3px;
+  right: -3px;
+  border-left: none;
+  border-top: none;
+  box-shadow: 2px 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(59, 130, 246, 0.4) 20%, 
+    #3b82f6 50%, 
+    rgba(59, 130, 246, 0.4) 80%, 
+    transparent 100%
+  );
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.8);
+  animation: scan 2s ease-in-out infinite;
+}
+
+@keyframes scan {
+  0%, 100% {
+    top: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+/*=================[Overlay]=========*/
+.qr-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(30, 58, 138, 0.85);
+  backdrop-filter: blur(8px);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.qr-overlay .spinner-border {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.3rem;
+}
+
+/*=================[Warning]=========*/
+.qr-warning {
+  margin-top: 1rem;
+  padding: 0.875rem 1.25rem;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #92400e;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.qr-warning i {
+  font-size: 1.25rem;
+  color: #f59e0b;
+}
+
+/*=================[Status Indicator]=========*/
+.scanner-status {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+}
+
+.status-text {
+  color: #065f46;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/*=================[Responsive]=========*/
+@media (max-width: 640px) {
+  .qr-scanner {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
+  .header-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .header-icon i {
+    font-size: 1.5rem;
+  }
+
+  .header-text h4 {
+    font-size: 1.1rem;
+  }
+
+  .header-text p {
+    font-size: 0.8rem;
+  }
+
+  .toolbar-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .camera-select {
+    min-width: 100%;
+  }
+
+  .corner {
+    width: 30px;
+    height: 30px;
+  }
+
+  .scan-line {
+    height: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .qr-scanner {
+    padding: 0.75rem;
+  }
+
+  .scan-frame {
+    inset: 10%;
+  }
+
+  .qr-warning,
+  .scanner-status {
+    font-size: 0.85rem;
+    padding: 0.625rem 1rem;
+  }
+}

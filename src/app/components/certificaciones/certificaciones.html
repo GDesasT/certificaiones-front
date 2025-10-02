@@ -170,7 +170,7 @@
               </h5>
             </div>
             <div class="card-body p-0">
-              <div class="table-responsive">
+              <div class="table-scroll">
                 <table class="table table-hover mb-0">
                   <thead class="table-header">
                     <tr>
@@ -181,6 +181,9 @@
                       <th scope="col" class="d-none d-md-table-cell">Fecha</th>
                       <th scope="col" class="d-none d-lg-table-cell">Entrenador</th>
                       <th scope="col" class="d-none d-md-table-cell">Estado</th>
+                      @for (rol of firmaRoles; track rol) {
+                        <th scope="col" class="d-none d-xl-table-cell">{{ rol | titlecase }}</th>
+                      }
                     </tr>
                   </thead>
                   <tbody>
@@ -229,10 +232,21 @@
                             {{ certificacion.estado }}
                           </span>
                         </td>
+                        @for (rol of firmaRoles; track rol) {
+                          <td class="d-none d-xl-table-cell">
+                            <div class="cell-content">
+                              @if (hasRole(certificacion.firmas, rol)) {
+                                <span class="text-success fw-semibold">{{ signerName(certificacion.firmas, rol) }}</span>
+                              } @else {
+                                <span class="text-warning fw-semibold">Pendiente</span>
+                              }
+                            </div>
+                          </td>
+                        }
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">
+                        <td colspan="10" class="text-center py-4 text-muted">
                           <i class="bi bi-inbox me-2"></i>
                           No se encontraron certificaciones para este filtro
                         </td>

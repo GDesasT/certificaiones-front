@@ -329,6 +329,25 @@
   position: relative;
 }
 
+/*=================[Indicadores compactos de firmas]=========*/
+.sig-dots {
+  display: inline-flex;
+  gap: 6px;
+}
+.sig-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fbbf24; /* pending */
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.sig-dot.signed {
+  background: #22c55e; /* green */
+}
+.sig-dot.pending {
+  background: #f59e0b; /* amber */
+}
+
 .cert-badge:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

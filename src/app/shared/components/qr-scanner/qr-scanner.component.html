@@ -1,0 +1,77 @@
+<div class="qr-scanner">
+  <!-- Header con título e instrucciones -->
+  <div class="scanner-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <i class="bi bi-qr-code-scan"></i>
+      </div>
+      <div class="header-text">
+        <h4 class="mb-1">Escanear Código QR</h4>
+        <p class="text-muted mb-0">Apunta la cámara hacia el código QR del empleado</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selector de cámara -->
+  @if (devices.length > 1) {
+    <div class="qr-toolbar">
+      <div class="toolbar-content">
+        <label class="toolbar-label">
+          <i class="bi bi-camera-video me-2"></i>
+          Seleccionar Cámara:
+        </label>
+        <select #deviceSel class="form-select camera-select" [value]="selectedDeviceId || ''" (change)="changeDevice(deviceSel.value)">
+          @for (d of devices; track d.deviceId) {
+            <option [value]="d.deviceId">{{ d.label || 'Cámara ' + (d.deviceId.slice(0,8)) }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  }
+
+  <!-- Visor de cámara -->
+  <div class="qr-video-container">
+    <div class="qr-video-wrapper">
+      <video #videoEl playsinline muted></video>
+      
+      <!-- Frame de escaneo -->
+      <div class="scan-frame">
+        <div class="corner corner-tl"></div>
+        <div class="corner corner-tr"></div>
+        <div class="corner corner-bl"></div>
+        <div class="corner corner-br"></div>
+        @if (running()) {
+          <div class="scan-line"></div>
+        }
+      </div>
+
+      <!-- Overlay de carga -->
+      @if (!running()) {
+        <div class="qr-overlay">
+          <div class="spinner-border text-light mb-3" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mb-0">Iniciando cámara...</p>
+        </div>
+      }
+    </div>
+
+    <!-- Advertencia de compatibilidad -->
+    @if (notSupported()) {
+      <div class="qr-warning">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Tu navegador no soporta detección automática de códigos QR. Prueba con Chrome o Edge.
+      </div>
+    }
+
+    <!-- Indicador de estado -->
+    @if (running() && !notSupported()) {
+      <div class="scanner-status">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          <span class="status-text">Listo para escanear</span>
+        </div>
+      </div>
+    }
+  </div>
+</div>

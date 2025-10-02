@@ -156,22 +156,24 @@
                       <td class="col-date">{{ formatearFecha(fila.empleado.fechaCertificacion) }}</td>
                       @for (operacion of operacionesPorLinea(); track operacion) {
                         <td class="col-operation">
-                          <div 
-                            class="cert-bubble" 
-                            [class]="obtenerClasePorcentaje(fila.certificaciones[operacion])"
-                          >
-                            @if (fila.certificaciones[operacion] > 0) {
-                              {{ fila.certificaciones[operacion] }}
-                            } @else {
-                              -
-                            }
+                          <div class="d-flex align-items-center gap-2">
+                            <div 
+                              class="cert-bubble" 
+                              [class]="obtenerClasePorcentaje(fila.certificaciones[operacion])"
+                            >
+                              @if (fila.certificaciones[operacion] > 0) {
+                                {{ fila.certificaciones[operacion] }}
+                              } @else {
+                                -
+                              }
+                            </div>
                           </div>
                         </td>
                       }
                     </tr>
                   } @empty {
                     <tr>
-                      <td [attr.colspan]="5 + operacionesPorLinea().length" class="empty-state">
+                      <td [attr.colspan]="5 + (operacionesPorLinea().length)" class="empty-state">
                         <i class="bi bi-inbox"></i>
                         <span>No hay datos disponibles</span>
                       </td>

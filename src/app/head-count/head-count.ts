@@ -3,6 +3,7 @@ import { Component, signal, computed, inject, ViewChild, ElementRef } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import Swal from 'sweetalert2';
+import { CertificacionesService } from '../services/certificaciones.service';
 
 //=================[Interfaces]=========
 interface Empleado {
@@ -29,6 +30,7 @@ interface Empleado {
 export class HeadCount {
   //=================[Inyecciones]=========
   private readonly fb = inject(FormBuilder);
+  private readonly api = inject(CertificacionesService);
 
   //=================[Referencias de Templates]=========
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -66,75 +68,28 @@ export class HeadCount {
   //=================[Métodos de Datos]=========
   cargarDatos(): void {
     this.cargandoDatos.set(true);
-    
-    // Simular llamada a API
-    setTimeout(() => {
-      const empleadosMock: Empleado[] = [
-        {
-          id: 1,
-          numeroEmpleado: '1001',
-          nombre: 'Juan Carlos Pérez',
-          clasificacion: 'Directo',
-          puesto: 'Operario de Producción',
-          departamento: 'Producción',
-          area: 'Línea A',
-          fechaIngreso: new Date('2023-01-15'),
-          rol: 'Operario',
-          estado: 'activo'
-        },
-        {
-          id: 2,
-          numeroEmpleado: '1002',
-          nombre: 'María Elena González',
-          clasificacion: 'Indirecto',
-          puesto: 'Supervisora de Calidad',
-          departamento: 'Calidad',
-          area: 'Control de Calidad',
-          fechaIngreso: new Date('2022-03-10'),
-          rol: 'Supervisor',
-          estado: 'activo'
-        },
-        {
-          id: 3,
-          numeroEmpleado: '1003',
-          nombre: 'Roberto Silva Martínez',
-          clasificacion: 'Directo',
-          puesto: 'Técnico de Mantenimiento',
-          departamento: 'Mantenimiento',
-          area: 'Mecánica',
-          fechaIngreso: new Date('2021-11-20'),
-          rol: 'Operario',
-          estado: 'activo'
-        },
-        {
-          id: 4,
-          numeroEmpleado: '1004',
-          nombre: 'Ana Patricia López',
-          clasificacion: 'Indirecto',
-          puesto: 'Gerente de Recursos Humanos',
-          departamento: 'Recursos Humanos',
-          area: 'Administración',
-          fechaIngreso: new Date('2020-06-01'),
-          rol: 'Administrador',
-          estado: 'activo'
-        },
-        {
-          id: 5,
-          numeroEmpleado: '1005',
-          nombre: 'Carlos Eduardo Ruiz',
-          clasificacion: 'Temporal',
-          puesto: 'Auxiliar de Almacén',
-          departamento: 'Logística',
-          area: 'Almacén',
-          fechaIngreso: new Date('2024-01-08'),
-          rol: 'Operario',
-          estado: 'activo'
-        }
-      ];
-      
-      this.empleados.set(empleadosMock);
-      this.cargandoDatos.set(false);
-    }, 1500);
+    this.api.getUsersDetailed().subscribe({
+      next: (users: any[]) => {
+        const mapped: Empleado[] = (Array.isArray(users) ? users : []).map((u, idx) => ({
+          id: Number(u.id ?? idx + 1),
+          numeroEmpleado: String(u.employee_number ?? u.number_employee ?? u.numeroEmpleado ?? u.numero ?? ''),
+          nombre: String(u.name ?? u.nombre ?? ''),
+          clasificacion: (String(u.classification ?? u.clasificacion ?? 'Directo') as any),
+          puesto: String(u.position ?? u.puesto ?? u.job_title ?? 'Operario'),
+          departamento: String(u.department ?? u.departamento ?? ''),
+          area: String(u.area?.name ?? u.area?.nombre ?? u.area ?? ''),
+          fechaIngreso: new Date(u.hire_date ?? u.fecha_ingreso ?? Date.now()),
+          rol: (String(u.role?.name ?? u.rol ?? 'Operario') as any),
+          estado: (String(u.status ?? u.estado ?? 'activo') as any)
+        }));
+        this.empleados.set(mapped);
+        this.cargandoDatos.set(false);
+      },
+      error: _ => {
+        this.empleados.set([]);
+        this.cargandoDatos.set(false);
+      }
+    });
   }
 
   //=================[Métodos de Modal]=========
