@@ -2,6 +2,7 @@
 import { Component, signal, computed, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { CertificacionesService } from '../services/certificaciones.service';
 
@@ -10,12 +11,12 @@ interface Empleado {
   id?: number;
   numeroEmpleado: string;
   nombre: string;
-  clasificacion: 'Directo' | 'Indirecto' | 'Temporal';
+  clasificacion: 'A' | 'D' | 'I' | 'E' | 'X';
   puesto: string;
   departamento: string;
   area: string;
   fechaIngreso: Date;
-  rol: 'Administrador' | 'Supervisor' | 'Operario';
+  rol: 'mantenimiento' | 'produccion' | 'calidad' | 'trainer' | 'employee' | 'dev' | 'disabled';
   estado?: 'activo' | 'inactivo';
 }
 
@@ -23,7 +24,7 @@ interface Empleado {
 @Component({
   selector: 'app-head-count',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './head-count.html',
   styleUrl: './head-count.css'
 })
@@ -45,8 +46,17 @@ export class HeadCount {
   protected readonly archivoSeleccionado = signal<File | null>(null);
   protected readonly dragging = signal(false);
 
+  //=================[Filtros]=========
+  protected filtroNumeroEmpleado = '';
+  protected filtroNombre = '';
+  private _empleadosFiltrados = signal<Empleado[]>([]);
+
   //=================[Propiedades Computadas]=========
   protected readonly totalEmpleados = computed(() => this.empleados().length);
+  
+  protected readonly empleadosFiltrados = computed(() => {
+    return this._empleadosFiltrados();
+  });
 
   //=================[Formularios]=========
   protected readonly empleadoForm: FormGroup = this.fb.group({
@@ -63,6 +73,9 @@ export class HeadCount {
   //=================[Ciclo de Vida]=========
   ngOnInit(): void {
     this.cargarDatos();
+    
+    // Inicializar filtros
+    this._empleadosFiltrados.set(this.empleados());
   }
 
   //=================[Métodos de Datos]=========
@@ -74,19 +87,21 @@ export class HeadCount {
           id: Number(u.id ?? idx + 1),
           numeroEmpleado: String(u.employee_number ?? u.number_employee ?? u.numeroEmpleado ?? u.numero ?? ''),
           nombre: String(u.name ?? u.nombre ?? ''),
-          clasificacion: (String(u.classification ?? u.clasificacion ?? 'Directo') as any),
+          clasificacion: (String(u.classification ?? u.clasificacion ?? 'D') as any),
           puesto: String(u.position ?? u.puesto ?? u.job_title ?? 'Operario'),
           departamento: String(u.department ?? u.departamento ?? ''),
           area: String(u.area?.name ?? u.area?.nombre ?? u.area ?? ''),
           fechaIngreso: new Date(u.hire_date ?? u.fecha_ingreso ?? Date.now()),
-          rol: (String(u.role?.name ?? u.rol ?? 'Operario') as any),
+          rol: (String(u.role?.name ?? u.rol ?? 'employee') as any),
           estado: (String(u.status ?? u.estado ?? 'activo') as any)
         }));
         this.empleados.set(mapped);
+        this.aplicarFiltros(); // Aplicar filtros después de cargar datos
         this.cargandoDatos.set(false);
       },
       error: _ => {
         this.empleados.set([]);
+        this._empleadosFiltrados.set([]);
         this.cargandoDatos.set(false);
       }
     });
@@ -149,51 +164,98 @@ export class HeadCount {
     this.guardandoEmpleado.set(true);
     const formData = this.empleadoForm.value;
 
-    // Simular llamada a API
-    setTimeout(() => {
-      const nuevoEmpleado: Empleado = {
-        id: this.modoEdicion() ? this.empleadoEditando()?.id : Date.now(),
-        numeroEmpleado: formData.numeroEmpleado,
-        nombre: formData.nombre,
-        clasificacion: formData.clasificacion,
-        puesto: formData.puesto,
-        departamento: formData.departamento,
-        area: formData.area,
-        fechaIngreso: new Date(formData.fechaIngreso),
-        rol: formData.rol,
-        estado: 'activo'
-      };
+    // Preparar datos para la API (usando los mismos campos que se reciben)
+    const empleadoData: any = {
+      employee_number: formData.numeroEmpleado,
+      name: formData.nombre,
+      classification: formData.clasificacion,
+      position: formData.puesto,
+      department: formData.departamento,
+      area: formData.area,
+      hire_date: formData.fechaIngreso,
+      rol: formData.rol  // Enviar "rol" sin 'e', igual que se recibe
+    };
 
-      if (this.modoEdicion()) {
-        // Actualizar empleado existente
-        const empleados = this.empleados().map(emp => 
-          emp.id === nuevoEmpleado.id ? nuevoEmpleado : emp
-        );
-        this.empleados.set(empleados);
+    // Si estamos editando, incluir el ID
+    if (this.modoEdicion()) {
+      const empleadoEditando = this.empleadoEditando();
+      if (empleadoEditando?.id) {
+        empleadoData.id = empleadoEditando.id;
+      }
+    }
+
+    // Debug: Verificar qué se está enviando
+    console.log('Datos que se enviarán al backend:', empleadoData);
+    console.log('Modo edición:', this.modoEdicion());
+    console.log('Empleado editando:', this.empleadoEditando());
+
+    this.api.createOrUpdateEmployee(empleadoData).subscribe({
+      next: (response) => {
+        this.guardandoEmpleado.set(false);
+        this.cerrarModal();
+        
+        // Actualización optimista inmediata
+        if (this.modoEdicion()) {
+          // Actualizar el empleado en la lista local inmediatamente
+          const empleados = this.empleados();
+          const empleadoEditando = this.empleadoEditando();
+          if (empleadoEditando) {
+            const index = empleados.findIndex(e => e.id === empleadoEditando.id);
+            if (index !== -1) {
+              // Actualizar con los nuevos datos
+              empleados[index] = {
+                ...empleados[index],
+                numeroEmpleado: formData.numeroEmpleado,
+                nombre: formData.nombre,
+                clasificacion: formData.clasificacion,
+                puesto: formData.puesto,
+                departamento: formData.departamento,
+                area: formData.area,
+                fechaIngreso: new Date(formData.fechaIngreso),
+                rol: formData.rol  // Actualizar el rol inmediatamente
+              };
+              
+              // Actualizar la lista y aplicar filtros
+              this.empleados.set([...empleados]);
+              this.aplicarFiltros();
+            }
+          }
+        }
+        
+        // Recargar la lista del backend (para estar seguro)
+        this.cargarDatos();
+        
+        const mensaje = this.modoEdicion() ? 'Empleado actualizado' : 'Empleado agregado';
+        const texto = this.modoEdicion() 
+          ? 'Los datos del empleado han sido actualizados correctamente'
+          : 'El nuevo empleado ha sido registrado correctamente';
         
         Swal.fire({
           icon: 'success',
-          title: 'Empleado actualizado',
-          text: 'Los datos del empleado han sido actualizados correctamente',
-          timer: 2000,
+          title: mensaje,
+          text: texto,
+          timer: 3000,
           showConfirmButton: false
         });
-      } else {
-        // Agregar nuevo empleado
-        this.empleados.set([...this.empleados(), nuevoEmpleado]);
+      },
+      error: (error) => {
+        this.guardandoEmpleado.set(false);
+        console.error('Error guardando empleado:', error);
+        
+        let mensaje = 'Error al guardar el empleado';
+        if (error.error?.message) {
+          mensaje = error.error.message;
+        } else if (error.error?.errors) {
+          mensaje = `Errores: ${Object.values(error.error.errors).join(', ')}`;
+        }
         
         Swal.fire({
-          icon: 'success',
-          title: 'Empleado agregado',
-          text: 'El nuevo empleado ha sido registrado correctamente',
-          timer: 2000,
-          showConfirmButton: false
+          icon: 'error',
+          title: 'Error',
+          text: mensaje
         });
       }
-
-      this.guardandoEmpleado.set(false);
-      this.cerrarModal();
-    }, 1000);
+    });
   }
 
   eliminarEmpleado(empleado: Empleado): void {
@@ -298,67 +360,139 @@ export class HeadCount {
     this.archivoSeleccionado.set(file);
   }
 
+  //=================[Métodos de Importación]=========
+  
+  descargarTemplate(): void {
+    this.api.downloadExcelTemplate().subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'template_empleados.xlsx';
+        link.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        console.error('Error descargando template:', error);
+        
+        // Mostrar información sobre el formato esperado
+        Swal.fire({
+          icon: 'info',
+          title: 'Template no disponible',
+          html: `
+            <p>El template del servidor no está disponible, pero puedes crear tu archivo Excel con estas columnas:</p>
+            <div class="text-start mt-3">
+              <strong>Columnas requeridas:</strong><br>
+              • employee_number<br>
+              • name<br>
+              • classification<br>
+              • position<br>
+              • department<br>
+              • area<br>
+              • hire_date (formato: YYYY-MM-DD)
+            </div>
+          `,
+          confirmButtonText: 'Entendido'
+        });
+      }
+    });
+  }
+
   importarArchivo(): void {
     if (!this.archivoSeleccionado()) return;
 
     this.importandoArchivo.set(true);
 
-    // Simular procesamiento del archivo Excel
-    setTimeout(() => {
-      // Datos simulados que se "extraerían" del Excel
-      const empleadosImportados: Empleado[] = [
-        {
-          id: Date.now() + 1,
-          numeroEmpleado: '2001',
-          nombre: 'Pedro Ramírez Castillo',
-          clasificacion: 'Directo',
-          puesto: 'Operario de Corte',
-          departamento: 'Producción',
-          area: 'Línea B',
-          fechaIngreso: new Date('2024-01-15'),
-          rol: 'Operario',
-          estado: 'activo'
-        },
-        {
-          id: Date.now() + 2,
-          numeroEmpleado: '2002',
-          nombre: 'Lucia Fernández Torres',
-          clasificacion: 'Indirecto',
-          puesto: 'Analista de Calidad',
-          departamento: 'Calidad',
-          area: 'Laboratorio',
-          fechaIngreso: new Date('2024-02-01'),
-          rol: 'Operario',
-          estado: 'activo'
-        },
-        {
-          id: Date.now() + 3,
-          numeroEmpleado: '2003',
-          nombre: 'Miguel Ángel Vargas',
-          clasificacion: 'Temporal',
-          puesto: 'Ayudante General',
-          departamento: 'Servicios Generales',
-          area: 'Limpieza',
-          fechaIngreso: new Date('2024-03-01'),
-          rol: 'Operario',
-          estado: 'activo'
+    // Primero intentar con la API real
+    this.api.importFromExcel(this.archivoSeleccionado()!).subscribe({
+      next: (response) => {
+        this.importandoArchivo.set(false);
+        this.cerrarModalImportar();
+        
+        // Recargar la lista de empleados
+        this.cargarDatos();
+        
+        const mensaje = response.message || 'Empleados importados correctamente';
+        const cantidad = response.imported_count || response.count || 'varios';
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Importación exitosa',
+          text: `${mensaje}. Se importaron ${cantidad} empleados.`,
+          timer: 4000,
+          showConfirmButton: false
+        });
+      },
+      error: (error) => {
+        console.error('Error importando archivo:', error);
+        
+        // Si es error 404 o 422, mostrar mensaje informativo
+        if (error.status === 404 || error.status === 422) {
+          this.importandoArchivo.set(false);
+          Swal.fire({
+            icon: 'info',
+            title: 'Funcionalidad pendiente',
+            text: 'La importación de archivos estará disponible cuando se configure el backend.',
+            confirmButtonText: 'Entendido'
+          });
+          return;
         }
-      ];
+        
+        this.importandoArchivo.set(false);
+        
+        let mensaje = 'Error al importar el archivo Excel';
+        let detalles = '';
+        
+        if (error.status === 0) {
+          mensaje = 'Error de conexión';
+          detalles = 'No se pudo conectar con el servidor.';
+        } else if (error.error?.message) {
+          mensaje = error.error.message;
+        } else if (error.error?.errors) {
+          detalles = `Errores: ${Object.values(error.error.errors).join(', ')}`;
+        }
+        
+        Swal.fire({
+          icon: 'error',
+          title: mensaje,
+          text: detalles || 'Por favor, verifica tu archivo y vuelve a intentarlo.',
+          confirmButtonText: 'Entendido',
+          footer: `<small>Código de error: ${error.status}</small>`
+        });
+      }
+    });
+  }
 
-      // Agregar empleados importados a la lista existente
-      const empleadosActuales = this.empleados();
-      this.empleados.set([...empleadosActuales, ...empleadosImportados]);
+  //=================[Métodos de Filtrado]=========
+  
+  aplicarFiltros(): void {
+    const empleados = this.empleados();
+    let resultado = [...empleados]; // Crear copia
+    
+    // Filtrar por número de empleado
+    if (this.filtroNumeroEmpleado.trim()) {
+      resultado = resultado.filter(emp => 
+        emp.numeroEmpleado.toLowerCase().includes(this.filtroNumeroEmpleado.trim().toLowerCase())
+      );
+    }
+    
+    // Filtrar por nombre
+    if (this.filtroNombre.trim()) {
+      resultado = resultado.filter(emp => 
+        emp.nombre.toLowerCase().includes(this.filtroNombre.trim().toLowerCase())
+      );
+    }
+    
+    this._empleadosFiltrados.set(resultado);
+  }
 
-      this.importandoArchivo.set(false);
-      this.cerrarModalImportar();
+  limpiarFiltros(): void {
+    this.filtroNumeroEmpleado = '';
+    this.filtroNombre = '';
+    this.aplicarFiltros();
+  }
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Importación exitosa',
-        text: `Se han importado ${empleadosImportados.length} empleados correctamente`,
-        timer: 3000,
-        showConfirmButton: false
-      });
-    }, 2000);
+  tienesFiltrosActivos(): boolean {
+    return this.filtroNumeroEmpleado.trim() !== '' || this.filtroNombre.trim() !== '';
   }
 }

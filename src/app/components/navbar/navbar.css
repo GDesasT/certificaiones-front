@@ -48,6 +48,40 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/*=================[Botones Uniformes en Desktop]=========*/
+@media (min-width: 992px) {
+  .navbar-nav .nav-link {
+    padding: 0.75rem 0.5rem !important;
+    white-space: nowrap;
+    font-size: 0.875rem;
+  }
+  
+  .navbar-nav .nav-link i {
+    margin-right: 0.3rem;
+    width: 12px;
+    text-align: center;
+  }
+  
+  /* Botón de logout con estilo especial */
+  .action-item {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+  
+  .action-item:hover {
+    border-color: rgba(239, 68, 68, 0.5);
+    background-color: rgba(239, 68, 68, 0.2);
+  }
+  
+  /* Para pantallas más pequeñas de desktop, reducir aún más */
+  @media (max-width: 1300px) {
+    .navbar-nav .nav-link {
+      padding: 0.75rem 0.4rem !important;
+      font-size: 0.8rem;
+    }
+  }
+}
+
 /*=================[Separador y Acciones]=========*/
 .navbar-divider {
   border: none;
@@ -64,6 +98,24 @@
 .action-item:hover {
   color: #fecaca !important;
   background-color: rgba(239, 68, 68, 0.1);
+}
+
+/*=================[Separador Desktop]=========*/
+@media (min-width: 992px) {
+  .navbar-divider {
+    display: block;
+    height: 30px;
+    width: 1px;
+    background-color: rgba(255, 255, 255, 0.3);
+    margin: 0 0.5rem;
+    align-self: center;
+  }
+  
+  /* Ocultar el HR y mostrar como border vertical */
+  .nav-item:has(.navbar-divider) {
+    display: flex;
+    align-items: center;
+  }
 }
 
 /*=================[Responsive]=========*/

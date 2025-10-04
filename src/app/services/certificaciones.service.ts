@@ -201,6 +201,44 @@ export class CertificacionesService {
       .pipe(catchError(this.handleError));
   }
 
+  //=================[Importación de Empleados]=========
+  
+  // Importar empleados desde Excel
+  importFromExcel(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.http.post<any>(`${this.base}/users/import`, formData)
+      .pipe(
+        timeout(60000), // 60 segundos para archivos grandes
+        catchError(this.handleError)
+      );
+  }
+
+  // Descargar template de Excel
+  downloadExcelTemplate(): Observable<Blob> {
+    return this.http.get(`${this.base}/users/import/template`, { 
+      responseType: 'blob',
+      observe: 'body'
+    }).pipe(catchError(this.handleError));
+  }
+
+  // Crear/actualizar empleado individual
+  createOrUpdateEmployee(employeeData: any): Observable<any> {
+    // Si tiene ID, es una actualización (PUT)
+    if (employeeData.id) {
+      const id = employeeData.id;
+      const { id: _, ...dataWithoutId } = employeeData; // Remover ID del body
+      return this.http.put<any>(`${this.base}/users/${id}`, dataWithoutId)
+        .pipe(catchError(this.handleError));
+    } 
+    // Si no tiene ID, es creación (POST)
+    else {
+      return this.http.post<any>(`${this.base}/users`, employeeData)
+        .pipe(catchError(this.handleError));
+    }
+  }
+
   //=================[Cache Management]=========
   clearCache(): void {
     this.cache.clear();
