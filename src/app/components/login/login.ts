@@ -66,9 +66,9 @@ export class Login {
         await this.router.navigate(['/certificaciones']);
       }
     } catch (e: any) {
-      if (e?.status === 401) this.errorMessage.set('Credenciales inválidas.');
-      else if (e?.status === 403) this.errorMessage.set('Usuario deshabilitado.');
-      else this.errorMessage.set('Error de conexión. Intenta más tarde.');
+  if (e?.status === 401) this.errorMessage.set('Credenciales inválidas.');
+  else if (e?.status === 403) this.errorMessage.set('Usuario deshabilitado.');
+  else this.errorMessage.set('Error de conexión con el servidor. Verifica que la API esté accesible desde el emulador (10.0.2.2:8000) o tu IP LAN y vuelve a intentar.');
     } finally {
       this.isLoading.set(false);
     }

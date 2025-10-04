@@ -3,12 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { map, timeout, catchError, shareReplay } from 'rxjs/operators';
-import { throwError, Observable, of } from 'rxjs';
+import { throwError, Observable, of, from } from 'rxjs';
+import { Capacitor } from '@capacitor/core';
+import { Http as CapacitorHttp } from '@capacitor-community/http';
 
 @Injectable({ providedIn: 'root' })
 export class CertificacionesService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBase;
+  private readonly isNative = Capacitor.isNativePlatform();
   
   // Cache para catálogos
   private readonly cache = new Map<string, Observable<any>>();
@@ -39,6 +42,62 @@ export class CertificacionesService {
     return (firstArray as T[]) ?? [];
   }
 
+  private parseData<T>(data: any): T {
+    if (typeof data === 'string') {
+      try { return JSON.parse(data) as T; } catch { return data as T; }
+    }
+    return data as T;
+  }
+
+  private authHeaders(): Record<string, string> {
+    try {
+      const token = localStorage.getItem('auth_token');
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private nativeGet<T>(url: string, params?: any): Observable<T> {
+    if (!environment.production) console.debug('[HTTP][native][GET]', url, params || '');
+    return from(CapacitorHttp.get({ url, params, headers: { 'Accept': 'application/json', ...this.authHeaders() } }))
+      .pipe(map(res => this.parseData<T>(res.data)));
+  }
+
+  private nativePost<T>(url: string, data?: any): Observable<T> {
+    if (!environment.production) console.debug('[HTTP][native][POST]', url, data || '');
+    return from(CapacitorHttp.post({ url, data, headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', ...this.authHeaders() } }))
+      .pipe(map(res => this.parseData<T>(res.data)));
+  }
+
+  private nativePut<T>(url: string, data?: any): Observable<T> {
+    if (!environment.production) console.debug('[HTTP][native][PUT]', url, data || '');
+    return from(CapacitorHttp.put({ url, data, headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', ...this.authHeaders() } }))
+      .pipe(map(res => this.parseData<T>(res.data)));
+  }
+
+  private getReq<T>(path: string, params?: any): Observable<T> {
+    const url = `${this.base}${path}`;
+    if (this.isNative) return this.nativeGet<T>(url, params);
+    const httpParams = params ? new HttpParams({ fromObject: params }) : undefined;
+    if (!environment.production) console.debug('[HTTP][web][GET]', url, params || '');
+    return this.http.get<T>(url, { params: httpParams });
+  }
+
+  private postReq<T>(path: string, body?: any): Observable<T> {
+    const url = `${this.base}${path}`;
+    if (this.isNative) return this.nativePost<T>(url, body);
+    if (!environment.production) console.debug('[HTTP][web][POST]', url, body || '');
+    return this.http.post<T>(url, body);
+  }
+
+  private putReq<T>(path: string, body?: any): Observable<T> {
+    const url = `${this.base}${path}`;
+    if (this.isNative) return this.nativePut<T>(url, body);
+    if (!environment.production) console.debug('[HTTP][web][PUT]', url, body || '');
+    return this.http.put<T>(url, body);
+  }
+
   private handleError = (error: any) => {
     // Solo logging en desarrollo
     if (!environment.production) {
@@ -50,7 +109,7 @@ export class CertificacionesService {
   //=================[Catálogos Optimizados con Cache]=========
   getAreas() {
     return this.getCachedData('areas', () =>
-      this.http.get<{ areas: any[] }>(`${this.base}/areas`)
+      this.getReq<{ areas: any[] }>(`/areas`)
         .pipe(map(r => this.extractArrayFromResponse(r, ['areas'])))
     );
   }
@@ -58,8 +117,8 @@ export class CertificacionesService {
   getLinesByArea(areaId: number) {
     const key = `lines_${areaId}`;
     return this.getCachedData(key, () => {
-      const params = new HttpParams().set('area_id', String(areaId));
-      return this.http.get<{ lines: any[] }>(`${this.base}/lines`, { params })
+      const params = { area_id: String(areaId) };
+      return this.getReq<{ lines: any[] }>(`/lines`, params)
         .pipe(map(r => this.extractArrayFromResponse(r, ['lines'])));
     });
   }
@@ -67,8 +126,8 @@ export class CertificacionesService {
   getProgramsByLine(lineId: number) {
     const key = `programs_${lineId}`;
     return this.getCachedData(key, () => {
-      const params = new HttpParams().set('line_id', String(lineId));
-      return this.http.get<{ programs: any[] }>(`${this.base}/programs`, { params })
+      const params = { line_id: String(lineId) };
+      return this.getReq<{ programs: any[] }>(`/programs`, params)
         .pipe(map(r => this.extractArrayFromResponse(r, ['programs'])));
     });
   }
@@ -76,18 +135,18 @@ export class CertificacionesService {
   getOperationsByProgram(programId: number) {
     const key = `operations_${programId}`;
     return this.getCachedData(key, () => {
-      const params = new HttpParams().set('program_id', String(programId));
-      return this.http.get<{ operations: any[] }>(`${this.base}/operations`, { params })
+      const params = { program_id: String(programId) };
+      return this.getReq<{ operations: any[] }>(`/operations`, params)
         .pipe(map(r => this.extractArrayFromResponse(r, ['operations'])));
     });
   }
 
   //=================[Búsqueda de Usuarios Optimizada]=========
   findUserByNumber(employee_number: string) {
-    return this.http.get<{ user: any }>(`${this.base}/users/by-number/${employee_number}`)
+    return this.getReq<{ user: any }>(`/users/by-number/${employee_number}`)
       .pipe(
         timeout(5000),
-        map(r => r.user ?? null),
+        map((r: any) => r?.user ?? r ?? null),
         catchError(error => {
           if (error.name === 'TimeoutError') {
             console.error('Búsqueda de empleado timeout');
@@ -100,7 +159,7 @@ export class CertificacionesService {
 
   getAllUsers() {
     return this.getCachedData('users', () =>
-      this.http.get<any>(`${this.base}/users`, { params: { all: 'true' } })
+      this.getReq<any>(`/users`, { all: 'true' })
         .pipe(
           map(r => {
             const users = this.extractArrayFromResponse(r, ['usuarios','users']);
@@ -116,7 +175,7 @@ export class CertificacionesService {
   // Usuarios detallados (sin normalizar) para Head Count
   getUsersDetailed() {
     return this.getCachedData('users_detailed', () =>
-      this.http.get<any>(`${this.base}/users`, { params: { all: 'true' } })
+      this.getReq<any>(`/users`, { all: 'true' })
         .pipe(
           map(r => this.extractArrayFromResponse(r, ['usuarios','users'])),
           catchError(this.handleError)
@@ -133,7 +192,7 @@ export class CertificacionesService {
     fecha_certificacion: string;
     notas?: string | null;
   }) {
-    return this.http.post(`${this.base}/certifiers`, payload)
+    return this.postReq<any>(`/certifiers`, payload)
       .pipe(catchError(this.handleError));
   }
 
@@ -143,16 +202,14 @@ export class CertificacionesService {
     porcentaje: number;
     notas?: string | null;
   }) {
-    return this.http.put(`${this.base}/certifiers/update-percent`, payload)
+    return this.putReq<any>(`/certifiers/update-percent`, payload)
       .pipe(catchError(this.handleError));
   }
 
   //=================[Consulta de Certificaciones Unificada]=========
   getCertificationsByEmployee(employee_number: string) {
-    const url = `${this.base}/certifiers-by-employee/${encodeURIComponent(employee_number)}`;
-    
-    return this.http
-      .get<any>(url)
+    const path = `/certifiers-by-employee/${encodeURIComponent(employee_number)}`;
+    return this.getReq<any>(path)
       .pipe(
         map(r => this.extractArrayFromResponse(r, ['certificaciones', 'certifiers', 'data', 'items', 'rows', 'result', 'results'])),
         catchError(this.handleError)
@@ -160,8 +217,7 @@ export class CertificacionesService {
   }
 
   getCertifiersWithUsers() {
-    return this.http
-      .get<any>(`${this.base}/certifiers-with-users`)
+    return this.getReq<any>(`/certifiers-with-users`)
       .pipe(
         map(r => this.extractArrayFromResponse(r, ['certificaciones', 'certifiers', 'data', 'items', 'rows', 'result', 'results'])),
         catchError(this.handleError)
@@ -170,34 +226,34 @@ export class CertificacionesService {
 
   //=================[Aprobaciones]=========
   listCertifiers(params: Record<string, any> = {}) {
-    return this.http.get<any>(`${this.base}/certifiers`, { params })
+    return this.getReq<any>(`/certifiers`, params)
       .pipe(catchError(this.handleError));
   }
   getCertifierById(id: number) {
-    return this.http.get<any>(`${this.base}/certifiers/${id}`)
+    return this.getReq<any>(`/certifiers/${id}`)
       .pipe(catchError(this.handleError));
   }
   listPendingByRole(role: 'mantenimiento'|'produccion'|'calidad', params: Record<string, any> = {}) {
-    return this.http.get<any>(`${this.base}/certifiers/pending`, { params: { role, ...params } })
+    return this.getReq<any>(`/certifiers/pending`, { role, ...params })
       .pipe(catchError(this.handleError));
   }
   approveCertifier(body: { certificacion_id: number; approver_number?: string; approver_qr?: string; approver_role: string; source?: string; notes?: string; }) {
-    return this.http.post<any>(`${this.base}/certifiers/approve`, body)
+    return this.postReq<any>(`/certifiers/approve`, body)
       .pipe(catchError(this.handleError));
   }
   revokeApproval(body: { certificacion_id: number; approver_role: string; }) {
-    return this.http.post<any>(`${this.base}/certifiers/revoke`, body)
+    return this.postReq<any>(`/certifiers/revoke`, body)
       .pipe(catchError(this.handleError));
   }
 
   //=================[Resolver Aprobador (QR/Número)]=========
   resolveApprover(params: { code: string; approver_role?: string; certificacion_id?: number | string; }) {
-    const httpParams = new HttpParams({ fromObject: {
+    const q = {
       code: params.code,
       ...(params.approver_role ? { approver_role: params.approver_role } : {}),
       ...(params.certificacion_id ? { certificacion_id: String(params.certificacion_id) } : {})
-    }});
-    return this.http.get<any>(`${this.base}/certifiers/resolve-approver`, { params: httpParams })
+    } as Record<string, any>;
+    return this.getReq<any>(`/certifiers/resolve-approver`, q)
       .pipe(catchError(this.handleError));
   }
 
@@ -246,5 +302,11 @@ export class CertificacionesService {
 
   clearCacheKey(key: string): void {
     this.cache.delete(key);
+  }
+
+  constructor() {
+    if (!environment.production) {
+      console.debug('[API] base =', this.base, '| native =', this.isNative);
+    }
   }
 }

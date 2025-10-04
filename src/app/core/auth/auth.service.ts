@@ -1,6 +1,10 @@
 //=================[Auth Service y Roles]=========
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Capacitor } from '@capacitor/core';
+import { Http as CapacitorHttp } from '@capacitor-community/http';
+import { from } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export type RoleName = 'admin' | 'dev' | 'trainer' | 'mantenimiento' | 'produccion' | 'calidad' | 'employee' | 'disabled';
@@ -25,6 +29,7 @@ export interface Capabilities {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly base = environment.apiBase;
+  private readonly isNative = Capacitor.isNativePlatform();
 
   private readonly _token = signal<string | null>(localStorage.getItem('auth_token'));
   private readonly _user = signal<AuthUser | null>(this.readJSON<AuthUser>('auth_user'));
@@ -56,11 +61,28 @@ export class AuthService {
   login(identifier: string, password: string) {
     const isEmail = /@/.test(identifier);
     const body = isEmail ? { email: identifier, password } : { number_employee: identifier, password };
-    return this.http.post<any>(`${this.base}/login`, body);
+    const url = `${this.base}/login`;
+    if (!environment.production) {
+      console.debug('[AUTH] POST', url, '| native =', this.isNative);
+    }
+    if (this.isNative) {
+      return from(CapacitorHttp.post({ url, data: body, headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } }))
+        .pipe(map(r => (typeof r.data === 'string' ? JSON.parse(r.data) : r.data)));
+    }
+    return this.http.post<any>(url, body);
   }
 
   getUser() {
-    return this.http.get<any>(`${this.base}/user`);
+    const url = `${this.base}/user`;
+    const token = localStorage.getItem('auth_token');
+    if (!environment.production) {
+      console.debug('[AUTH] GET', url, '| token?', !!token, '| native =', this.isNative);
+    }
+    if (this.isNative) {
+      return from(CapacitorHttp.get({ url, headers: { 'Accept': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } }))
+        .pipe(map(r => (typeof r.data === 'string' ? JSON.parse(r.data) : r.data)));
+    }
+    return this.http.get<any>(url);
   }
 
   //=================[Session]=========

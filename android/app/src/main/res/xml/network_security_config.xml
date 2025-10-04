@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Dev: permite HTTP plano globalmente. Para producción, usa HTTPS. -->
+    <base-config cleartextTrafficPermitted="true" />
+
+    <!-- Hosts comunes en desarrollo -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- LAN backend -->
+        <domain includeSubdomains="true">172.20.10.13</domain>
+    </domain-config>
+</network-security-config>

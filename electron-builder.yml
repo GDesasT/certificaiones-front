@@ -1,0 +1,25 @@
+appId: com.gdesast.certificaciones
+productName: Certificaciones
+directories:
+  output: release
+files:
+  - dist/Proyecto-Certificaciones/**
+  - electron/**
+asar: false
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+win:
+  target:
+    - nsis
+    - portable
+linux:
+  target:
+    - AppImage
+    - deb
+    - rpm
+publish: null
+extraMetadata:
+  main: electron/main.js

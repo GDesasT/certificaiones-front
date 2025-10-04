@@ -1,5 +1,4 @@
 <div class="qr-scanner">
-  <!-- Header con título e instrucciones -->
   <div class="scanner-header">
     <div class="header-content">
       <div class="header-icon">
@@ -33,7 +32,7 @@
   <div class="qr-video-container">
     <div class="qr-video-wrapper">
       <video #videoEl playsinline muted></video>
-      
+
       <!-- Frame de escaneo -->
       <div class="scan-frame">
         <div class="corner corner-tl"></div>
@@ -45,13 +44,29 @@
         }
       </div>
 
-      <!-- Overlay de carga -->
+      <!-- Overlay de carga / inicio / error -->
       @if (!running()) {
-        <div class="qr-overlay">
-          <div class="spinner-border text-light mb-3" role="status">
-            <span class="visually-hidden">Cargando...</span>
-          </div>
-          <p class="mb-0">Iniciando cámara...</p>
+        <div class="qr-overlay text-center">
+          @if (permissionError()) {
+            <div class="alert alert-warning text-start" role="alert">
+              <i class="bi bi-shield-lock-fill me-2"></i>
+              {{ permissionError() }}
+            </div>
+            <button class="btn btn-primary" (click)="start()">
+              <i class="bi bi-camera-video me-2"></i>
+              Reintentar
+            </button>
+          } @else if (startRequired()) {
+            <button class="btn btn-primary" (click)="start()">
+              <i class="bi bi-play-fill me-2"></i>
+              Iniciar cámara
+            </button>
+          } @else {
+            <div class="spinner-border text-light mb-3" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mb-0">Iniciando cámara...</p>
+          }
         </div>
       }
     </div>
@@ -61,6 +76,14 @@
       <div class="qr-warning">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
         Tu navegador no soporta detección automática de códigos QR. Prueba con Chrome o Edge.
+      </div>
+    }
+
+    <!-- Advertencia de contexto inseguro -->
+    @if (insecureContext) {
+      <div class="qr-warning">
+        <i class="bi bi-lock me-2"></i>
+        Para usar la cámara se requiere un contexto seguro. Abre el sitio con HTTPS o en localhost.
       </div>
     }
 
